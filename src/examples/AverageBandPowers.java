@@ -17,6 +17,7 @@ import com.sun.jna.ptr.DoubleByReference;
 import com.sun.jna.ptr.IntByReference;
 
 public class AverageBandPowers{
+
 	public static void main(String[] args){
 		Pointer eEvent = Edk.INSTANCE.IEE_EmoEngineEventCreate();
 		Pointer eState = Edk.INSTANCE.IEE_EmoStateCreate();
