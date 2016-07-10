@@ -12,14 +12,15 @@ import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.util.Scanner;
+
+import org.json.JSONObject;
 
 public class TestNeuroskyJava {
-	
-	public static void main(String[]args){
-		
+
+	public static void main(String[] args) {
+
 		PrintWriter writeFile = null;
-		
+
 		try {
 			Socket socket = new Socket("127.0.0.1", 13854);
 			InputStream is = socket.getInputStream();
@@ -27,21 +28,39 @@ public class TestNeuroskyJava {
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
 			BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(os));
 			writeFile = new PrintWriter(new FileWriter(new File("test.txt")));
-			
+
 			bw.write("{\"enableRawOutput\":true,\"format\":\"Json\"}\n");
 			bw.flush();
 			System.out.println("wrote preferences");
+
+			// File file = new File("test.txt");
+			// Scanner scan = new Scanner(System.in);
+			// String c = scan.next();
+			/*
+			 * while(true){ //System.out.print('a'); String line =
+			 * br.readLine(); System.out.println(line); Thread.sleep(500);
+			 * //Thread.sleep(100); //writeFile.println(line); }
+			 */
+			/*bw.write("{\"startRecording\":{\"rawEeg\":true,\"poorSignalLevel\":true,\"eSense\":true,"
+					+ "eegPower\":true,\"blinkStrength\":true},\"applicationName\":\"ExampleApp\"}");
+			bw.flush();*/
 			
-			//File file = new File("test.txt");
-			//Scanner scan = new Scanner(System.in);
-			//String c = scan.next();
-			while(true){
-				//System.out.print('a');
-				String line = br.readLine();
-				System.out.println(line);
-				//Thread.sleep(100);
-				//writeFile.println(line);
+			String line = br.readLine();
+			while(line.startsWith("{\"poorSignalLevel\":200,")){
+				line = br.readLine();
 			}
+			
+			//System.out.println("Start Recording:");
+			
+			//Thread.sleep(10000);
+			//bw.write("{\"stopRecording\":\"ExampleApp\"}");
+			//bw.flush();
+			//System.out.println("End Recording");
+			
+			while(true){
+				System.out.println(br.readLine());
+			}
+
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -49,9 +68,9 @@ public class TestNeuroskyJava {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 
-		
-		finally{
-			if(writeFile != null){
+
+		finally {
+			if (writeFile != null) {
 				writeFile.close();
 			}
 		}
