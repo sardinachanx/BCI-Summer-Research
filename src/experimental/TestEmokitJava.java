@@ -1,17 +1,17 @@
 package experimental;
 
-import java.util.concurrent.locks.Condition;
+/*import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.github.fommil.emokit.Emotiv;
 import com.github.fommil.emokit.EmotivListener;
 import com.github.fommil.emokit.Packet;
 import com.github.fommil.emokit.jpa.EmotivDatum;
-import com.github.fommil.emokit.jpa.EmotivSession;
+import com.github.fommil.emokit.jpa.EmotivSession;*/
 
 public class TestEmokitJava{
 
-	public static void main(String[] args) throws Exception{
+	/*public static void main(String[] args) throws Exception{
 		Emotiv emotiv = new Emotiv();
 
 		final EmotivSession session = new EmotivSession();
@@ -36,6 +36,6 @@ public class TestEmokitJava{
 
 		emotiv.start();
 		condition.await();
-	}
+	}*/
 
 }

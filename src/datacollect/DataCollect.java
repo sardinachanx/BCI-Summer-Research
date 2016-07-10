@@ -179,7 +179,7 @@ public class DataCollect extends JFrame{
 		init();
 
 		try{
-			socket = new Socket("127.0.0.1", 80);
+			socket = new Socket("127.0.0.1", 13854);
 		}
 		catch(Exception e){
 			JOptionPane.showMessageDialog(contentPane, "Cannot connect to NeuroSky.", "Error",
