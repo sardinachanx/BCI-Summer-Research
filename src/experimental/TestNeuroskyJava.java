@@ -50,21 +50,29 @@ public class TestNeuroskyJava {
 				line = br.readLine();
 			}
 			
-			//System.out.println("Start Recording:");
+			System.out.println("Start Recording:");
 			
-			//Thread.sleep(10000);
-			//bw.write("{\"stopRecording\":\"ExampleApp\"}");
-			//bw.flush();
-			//System.out.println("End Recording");
+			Thread.sleep(10000);
+			bw.write("{\"stopRecording\":\"ExampleApp\"}");
+			bw.flush();
+			System.out.println("End Recording");
+			
+			bw.write("{\"getSessionIds\":\"ExampleApp\"}");
 			
 			while(true){
-				System.out.println(br.readLine());
+				System.out.print(br.read());
 			}
+			
+			
+
 
 		} catch (UnknownHostException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} 

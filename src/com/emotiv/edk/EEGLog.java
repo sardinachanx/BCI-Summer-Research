@@ -6,11 +6,14 @@ import com.sun.jna.ptr.IntByReference;
 public class EEGLog {
 
 	public static void main(String[] args) {
+		System.setProperty("jna.library.path", "C:\\Program Files (x86)\\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM");
+		
 		Pointer eEvent = Edk.INSTANCE.EE_EmoEngineEventCreate();
 		Pointer eState = Edk.INSTANCE.EE_EmoStateCreate();
 		IntByReference userID = null;
 		IntByReference nSamplesTaken = null;
 		short composerPort = 1726;
+		//EDIT THIS VARIABLE TO TEST DIFFERENT ENVIRONMENTS
 		int option = 1;
 		int state = 0;
 		float secs = 1;
