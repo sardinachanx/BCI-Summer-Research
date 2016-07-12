@@ -45,8 +45,8 @@ public class DataCollect extends JFrame {
 	private static final long serialVersionUID = -3478409869011707701L;
 	private static final String PATH = "images/";
 	private static final int DEFAULT_REPETITION = 20;
-	private static final int INIT_CALIBRATION_TIME = 5000;
-	private static final int EXPRESSION_TIME = 5000;
+	private static final int INIT_CALIBRATION_TIME = 20000;
+	private static final int EXPRESSION_TIME = 10000;
 	private static final int CALM_TIME = 1000;
 	private static final int DASH = 9;
 	private static final int END = 10;
@@ -134,11 +134,8 @@ public class DataCollect extends JFrame {
 						if (rd.readyToCollect) {
 							rd.execute();
 						} else {
-							throw new Exception();
+							throw new IllegalStateException();
 						}
-						// System.out.println("it reached here: neurosky");
-						// System.out.println("current: " + currentImageNumber +
-						// " , total: " + totalImageNumber);
 					} else {
 						JOptionPane.showMessageDialog(contentPane, "Please select an EEG headset.", "Error",
 								JOptionPane.ERROR_MESSAGE);
@@ -205,7 +202,9 @@ public class DataCollect extends JFrame {
 			JLabel label = new JLabel(new ImageIcon(image));
 			images.add(label);
 		} catch (IOException e) {
-			System.out.println("Error: image initialization error");
+
+			JOptionPane.showMessageDialog(contentPane, "Image initialization error.", "Error",
+					JOptionPane.ERROR_MESSAGE);
 			System.exit(1);
 		}
 	}
@@ -217,13 +216,11 @@ public class DataCollect extends JFrame {
 	private abstract class RecordData extends SwingWorker<Void, Data> {
 
 		protected int cycles;
-		List<List<String>> toWrite;
-		boolean readyToCollect;
+		List<List<String>> toWrite = new ArrayList<List<String>>();
+		boolean readyToCollect = false;
 
 		public RecordData(int cycles) {
 			this.cycles = cycles;
-			toWrite = new ArrayList<List<String>>();
-			readyToCollect = false;
 		}
 
 		@Override
@@ -233,7 +230,6 @@ public class DataCollect extends JFrame {
 				imageDisplay.add(images.get(d.index));
 				repaint();
 				counter.setText(d.message);
-				System.out.println("processed " + d.index);
 			}
 		}
 
@@ -338,23 +334,19 @@ public class DataCollect extends JFrame {
 			int stage = 1;
 			while (true) {
 				state = Edk.INSTANCE.EE_EngineGetNextEvent(eEvent);
-				
 				if (state == EdkErrorCode.EDK_OK.ToInt()) {
 					int eventType = Edk.INSTANCE.EE_EmoEngineEventGetType(eEvent);
 					Edk.INSTANCE.EE_EmoEngineEventGetUserId(eEvent, userID);
-					
 					if (eventType == Edk.EE_Event_t.EE_UserAdded.ToInt()) {
 						if (userID != null) {
-							System.out.println("User added");
 							Edk.INSTANCE.EE_DataAcquisitionEnable(userID.getValue(), true);
 							readyToCollect = true;
 						}
 					}
 				} else if (state != EdkErrorCode.EDK_NO_EVENT.ToInt()) {
-					System.out.println("Internal error in Emotiv Engine!");
-					JOptionPane.showMessageDialog(contentPane, "Cannot connect to EPOC.", "Error",
+					JOptionPane.showMessageDialog(contentPane, "Cannot connect to EPOC. Check your device.", "Error",
 							JOptionPane.ERROR_MESSAGE);
-					break; 
+					break;
 				}
 				if (readyToCollect) {
 					switch (stage) {
@@ -369,11 +361,9 @@ public class DataCollect extends JFrame {
 							stage++;
 							currentCycle++;
 							startTime = 0;
-							System.out.println("moving on to stage 2");
 							continue;
 						}
 						break;
-
 					case 2:
 						if (startTime == 0) {
 							int nextIndex = genNextImage();
@@ -386,17 +376,15 @@ public class DataCollect extends JFrame {
 							currentCycle++;
 							if (currentCycle > cycles) {
 								stage++;
-								System.out.println("moving on to stage 3");
 								continue;
-							} 
-							else {
+							} else {
 								startTime = 0;
 								publish(new Data(DASH, ""));
 								Thread.sleep(CALM_TIME);
+								continue;
 							}
 						}
 						break;
-
 					case 3:
 						publish(new Data(END, "Writing file"));
 						Date date = new Date();
@@ -413,12 +401,9 @@ public class DataCollect extends JFrame {
 						publish(new Data(END, "File writing completed"));
 						return null;
 					}
-
 					Edk.INSTANCE.EE_DataUpdateHandle(0, hData);
 					Edk.INSTANCE.EE_DataGetNumberOfSample(hData, nSamplesTaken);
 					if (nSamplesTaken != null && nSamplesTaken.getValue() != 0) {
-						//System.out.print("Updated: ");
-						//System.out.println(nSamplesTaken.getValue());
 						double[] data = new double[nSamplesTaken.getValue()];
 						for (int sampleIdx = 0; sampleIdx < nSamplesTaken.getValue(); ++sampleIdx) {
 							for (int i = 0; i < 14; i++) {
@@ -431,7 +416,6 @@ public class DataCollect extends JFrame {
 			}
 			return null;
 		}
-
 	}
 
 	private class Data {
@@ -443,7 +427,5 @@ public class DataCollect extends JFrame {
 			this.index = index;
 			this.message = message;
 		}
-
 	}
-
 }
