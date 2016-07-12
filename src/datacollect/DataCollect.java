@@ -376,13 +376,12 @@ public class DataCollect extends JFrame {
 							currentCycle++;
 							if (currentCycle > cycles) {
 								stage++;
-								continue;
 							} else {
 								startTime = 0;
 								publish(new Data(DASH, ""));
 								Thread.sleep(CALM_TIME);
-								continue;
 							}
+							continue;
 						}
 						break;
 					case 3:
