@@ -53,14 +53,13 @@ public class DataCollect extends JFrame {
 	private static final String[] NAMES = { "angry.jpg", "closeeye.jpg", "eyebrow.jpg", "mouthL.jpg", "mouthR.jpg",
 			"smile.jpg", "surprise.jpg", "winkL.jpg", "winkR.jpg", "dash.jpg", "done.jpg" };
 
-	private List<JLabel> images;
+	private List<JLabel> images = new ArrayList<JLabel>();;
 
 	private JPanel contentPane;
 	private JTextField textField;
 	private JPanel imageDisplay;
 	private JButton startSession;
 	private JLabel counter;
-	// private ButtonGroup buttonGroup;
 	private JRadioButton epoc;
 	private JRadioButton neuroSky;
 	private int currentImageNumber;
@@ -94,8 +93,6 @@ public class DataCollect extends JFrame {
 
 		currentImageNumber = 0;
 		totalImageNumber = DEFAULT_REPETITION;
-
-		images = new ArrayList<JLabel>();
 		init();
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
