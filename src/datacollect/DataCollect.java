@@ -334,6 +334,14 @@ public class DataCollect extends JFrame {
 			int currentCycle = 0;
 			int state = 0;
 			int stage = 1;
+			/*
+			 * Optional: User profile loading; replace "userID" with a valid user id and fileLocation with the profile path
+			 * int userLoading = Edk.INSTANCE.EE_LoadUserProfile(userID, fileLocation);
+			 * if(userLoading != EdkErrorCode.EDK_OK.ToInt()){
+			 * 		JOptionPane.showMessageDialog(contentPane, "Cannot load specified user profile.", "Error",
+						JOptionPane.ERROR_MESSAGE);
+			 * }
+			 */
 			while (true) {
 				state = Edk.INSTANCE.EE_EngineGetNextEvent(eEvent);
 				if (state == EdkErrorCode.EDK_OK.ToInt()) {
