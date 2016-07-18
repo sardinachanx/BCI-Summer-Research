@@ -37,13 +37,16 @@ import javax.swing.border.EmptyBorder;
 
 import com.emotiv.edk.Edk;
 import com.emotiv.edk.EdkErrorCode;
+import com.emotiv.edk.EmoState;
 import com.sun.jna.Pointer;
 import com.sun.jna.ptr.IntByReference;
 
 public class DataCollect extends JFrame {
 
 	private static final long serialVersionUID = -3478409869011707701L;
-	private static final String PATH = "images/";
+	//Modify the following constants as needed
+	private static final String IMAGE_PATH = "images/";
+	private static final String FILE_PATH = "data/";
 	private static final int DEFAULT_REPETITION = 20;
 	private static final int INIT_CALIBRATION_TIME = 20000;
 	private static final int EXPRESSION_TIME = 10000;
@@ -72,7 +75,7 @@ public class DataCollect extends JFrame {
 	public static void main(String[] args) {
 		System.setProperty("jna.library.path",
 				"C:\\Program Files (x86)\\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM");
-
+		//Change the second arg (the path) to where the .dll libraries are located.
 		EventQueue.invokeLater(new Runnable() {
 			@Override
 			public void run() {
@@ -195,7 +198,7 @@ public class DataCollect extends JFrame {
 
 	private void addNewImage(String name) {
 		try {
-			BufferedImage image = ImageIO.read(new File(PATH + name));
+			BufferedImage image = ImageIO.read(new File(IMAGE_PATH + name));
 			JLabel label = new JLabel(new ImageIcon(image));
 			images.add(label);
 		} catch (IOException e) {
@@ -258,7 +261,7 @@ public class DataCollect extends JFrame {
 		protected Void doInBackground() throws Exception {
 			publish(new Data(DASH, "Calibrating for 20 seconds. Please keep calm."));
 			List<String> current = new ArrayList<String>();
-			current.add("=========CALIBRATION DATA=========");
+			current.add("==================CALIBRATION DATA==================");
 			long time = System.currentTimeMillis();
 			while (System.currentTimeMillis() - time < INIT_CALIBRATION_TIME) {
 				String line = br.readLine();
@@ -270,7 +273,7 @@ public class DataCollect extends JFrame {
 				int nextIndex = genNextImage();
 				current = new ArrayList<String>();
 				publish(new Data(nextIndex, updateCounter()));
-				current.add("=========IMAGE " + currentImageNumber + ": " + NAMES[nextIndex] + "=========");
+				current.add("==================IMAGE " + currentImageNumber + ": " + NAMES[nextIndex] + "==================");
 				time = System.currentTimeMillis();
 				while (System.currentTimeMillis() - time < EXPRESSION_TIME) {
 					current.add(br.readLine());
@@ -283,7 +286,7 @@ public class DataCollect extends JFrame {
 			publish(new Data(END, "Writing file"));
 			Date date = new Date();
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
-			File file = new File(dateFormat.format(date) + "-NeuroSky" + ".txt");
+			File file = new File(FILE_PATH + "NeuroSky/" + dateFormat.format(date) + ".txt");
 			BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 			for (List<String> trials : toWrite) {
 				for (String s : trials) {
@@ -302,6 +305,7 @@ public class DataCollect extends JFrame {
 		private static final float BUFFER_SIZE = 0.25f;
 
 		Pointer eEvent;
+		Pointer eState;
 		Pointer hData;
 		IntByReference userID;
 		IntByReference nSamplesTaken;
@@ -309,6 +313,7 @@ public class DataCollect extends JFrame {
 		public RecordEpoc(int cycles) {
 			super(cycles);
 			eEvent = Edk.INSTANCE.EE_EmoEngineEventCreate();
+			eState = Edk.INSTANCE.EE_EmoStateCreate();
 			userID = new IntByReference();
 			nSamplesTaken = new IntByReference();
 
@@ -338,6 +343,61 @@ public class DataCollect extends JFrame {
 						if (userID != null) {
 							Edk.INSTANCE.EE_DataAcquisitionEnable(userID.getValue(), true);
 							readyToCollect = true;
+						}
+					}
+					if (eventType == Edk.EE_Event_t.EE_EmoStateUpdated.ToInt()) {
+						Edk.INSTANCE.EE_EmoEngineEventGetEmoState(eEvent, eState);
+						if (EmoState.INSTANCE.ES_ExpressivIsBlink(eState) == 1) {
+							current.add("Logged: Blink");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsEyesOpen(eState) == 1) {
+							current.add("Logged: Eyes opened");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsLeftWink(eState) == 1) {
+							current.add("Logged: Left wink");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsLookingDown(eState) == 1) {
+							current.add("Logged: Looking down");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsLookingLeft(eState) == 1) {
+							current.add("Logged: Looking left");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsLookingRight(eState) == 1) {
+							current.add("Logged: Looking right");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsLookingUp(eState) == 1) {
+							current.add("Logged: Looking up");
+						}
+						if (EmoState.INSTANCE.ES_ExpressivIsRightWink(eState) == 1) {
+							current.add("Logged: Right wink");
+						}
+						
+						String upperState = reverseLookupExpressiv(EmoState.INSTANCE.ES_ExpressivGetUpperFaceAction(eState));
+						if (upperState != null) {
+							current.add("Detected upper face state: " + upperState + ", Power: "
+									+ EmoState.INSTANCE.ES_ExpressivGetUpperFaceActionPower(eState));
+						} else {
+							current.add("Detected upper face state: none");
+						}
+
+						String lowerState = reverseLookupExpressiv(EmoState.INSTANCE.ES_ExpressivGetLowerFaceAction(eState));
+						if (lowerState != null) {
+							current.add("Detected lower face state: " + lowerState + ", Power: "
+									+ EmoState.INSTANCE.ES_ExpressivGetLowerFaceActionPower(eState));
+						} else {
+							current.add("Detected lower face state: none");
+						}
+						
+						current.add("Engagement/Boredom Score: " + EmoState.INSTANCE.ES_AffectivGetEngagementBoredomScore(eState));
+						current.add("Excitement (Short Term) Score: " + EmoState.INSTANCE.ES_AffectivGetExcitementShortTermScore(eState));
+						current.add("Excitement (Long Term) Score: " + EmoState.INSTANCE.ES_AffectivGetExcitementLongTermScore(eState));
+						current.add("Frustration Score: " + EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState));
+						current.add("Meditation Score: " + EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState));
+						
+						String action = reverseLookupCognitiv(EmoState.INSTANCE.ES_CognitivGetCurrentAction(eState));
+						if(action != null){
+							current.add("Detected action: " + action + ", Power: "
+									+ EmoState.INSTANCE.ES_CognitivGetCurrentActionPower(eState));
 						}
 					}
 				} else if (state != EdkErrorCode.EDK_NO_EVENT.ToInt()) {
@@ -385,7 +445,7 @@ public class DataCollect extends JFrame {
 						publish(new Data(END, "Writing file"));
 						Date date = new Date();
 						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
-						File file = new File(dateFormat.format(date) + "-EPOC" + ".txt");
+						File file = new File(FILE_PATH + "EPOC/" + dateFormat.format(date) + ".txt");
 						BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 						for (List<String> trials : toWrite) {
 							for (String s : trials) {
@@ -408,6 +468,24 @@ public class DataCollect extends JFrame {
 						}
 						current.add(Arrays.toString(data));
 					}
+				}
+			}
+			return null;
+		}
+
+		private String reverseLookupExpressiv(int value) {
+			for (EmoState.EE_ExpressivAlgo_t state : EmoState.EE_ExpressivAlgo_t.values()) {
+				if (value == state.ToInt()) {
+					return state.name();
+				}
+			}
+			return null;
+		}
+		
+		private String reverseLookupCognitiv(int value) {
+			for(EmoState.EE_CognitivAction_t action : EmoState.EE_CognitivAction_t.values()){
+				if(value == action.ToInt()){
+					return action.name();
 				}
 			}
 			return null;

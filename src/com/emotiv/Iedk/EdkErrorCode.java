@@ -1,6 +1,5 @@
 package com.emotiv.Iedk;
 
-
 public enum EdkErrorCode {
 	EDK_OK(0x0000),
 	// ! An internal error occurred
