@@ -13,16 +13,15 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import org.json.JSONObject;
-
 public class TestNeuroskyJava {
 
 	public static void main(String[] args) {
 
 		PrintWriter writeFile = null;
+		Socket socket = null;
 
 		try {
-			Socket socket = new Socket("127.0.0.1", 13854);
+			socket = new Socket("127.0.0.1", 13854);
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
 			BufferedReader br = new BufferedReader(new InputStreamReader(is));
@@ -80,6 +79,14 @@ public class TestNeuroskyJava {
 		finally {
 			if (writeFile != null) {
 				writeFile.close();
+			}
+			if(socket != null){
+				try{
+					socket.close();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}
 		}
 	}

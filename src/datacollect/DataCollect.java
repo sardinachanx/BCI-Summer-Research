@@ -44,17 +44,16 @@ import com.sun.jna.ptr.IntByReference;
 public class DataCollect extends JFrame {
 
 	private static final long serialVersionUID = -3478409869011707701L;
-	//Modify the following constants as needed
+	// Modify the following constants as needed
 	private static final String IMAGE_PATH = "images/";
-	private static final String FILE_PATH = "data/";
 	private static final int DEFAULT_REPETITION = 20;
 	private static final int INIT_CALIBRATION_TIME = 20000;
-	private static final int EXPRESSION_TIME = 10000;
+	private static final int EXPRESSION_TIME = 5000;
 	private static final int CALM_TIME = 1000;
 	private static final int DASH = 9;
 	private static final int END = 10;
 	private static final String[] NAMES = { "angry.jpg", "closeeye.jpg", "eyebrow.jpg", "mouthL.jpg", "mouthR.jpg",
-			"smile.jpg", "surprise.jpg", "winkL.jpg", "winkR.jpg", "dash.jpg", "done.jpg" };
+			"smile.jpg", "winkL.jpg", "winkR.jpg", "countdown.jpg", "dash.jpg", "done.jpg" };
 
 	private List<JLabel> images = new ArrayList<JLabel>();;
 
@@ -75,7 +74,8 @@ public class DataCollect extends JFrame {
 	public static void main(String[] args) {
 		System.setProperty("jna.library.path",
 				"C:\\Program Files (x86)\\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM");
-		//Change the second arg (the path) to where the .dll libraries are located.
+		// Change the second arg (the path) to where the .dll libraries are
+		// located.
 		EventQueue.invokeLater(new Runnable() {
 			@Override
 			public void run() {
@@ -273,7 +273,8 @@ public class DataCollect extends JFrame {
 				int nextIndex = genNextImage();
 				current = new ArrayList<String>();
 				publish(new Data(nextIndex, updateCounter()));
-				current.add("==================IMAGE " + currentImageNumber + ": " + NAMES[nextIndex] + "==================");
+				current.add("==================IMAGE " + currentImageNumber + ": " + NAMES[nextIndex]
+						+ "==================");
 				time = System.currentTimeMillis();
 				while (System.currentTimeMillis() - time < EXPRESSION_TIME) {
 					current.add(br.readLine());
@@ -283,10 +284,10 @@ public class DataCollect extends JFrame {
 				publish(new Data(DASH, ""));
 				Thread.sleep(CALM_TIME);
 			}
-			publish(new Data(END, "Writing file"));
+			publish(new Data(DASH, "Writing file"));
 			Date date = new Date();
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
-			File file = new File(FILE_PATH + "NeuroSky/" + dateFormat.format(date) + ".txt");
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+			File file = new File(dateFormat.format(date) + "-NeuroSky" + ".txt");
 			BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 			for (List<String> trials : toWrite) {
 				for (String s : trials) {
@@ -335,12 +336,13 @@ public class DataCollect extends JFrame {
 			int state = 0;
 			int stage = 1;
 			/*
-			 * Optional: User profile loading; replace "userID" with a valid user id and fileLocation with the profile path
-			 * int userLoading = Edk.INSTANCE.EE_LoadUserProfile(userID, fileLocation);
+			 * Optional: User profile loading; replace "userID" with a valid
+			 * user id and fileLocation with the profile path int userLoading =
+			 * Edk.INSTANCE.EE_LoadUserProfile(userID, fileLocation);
 			 * if(userLoading != EdkErrorCode.EDK_OK.ToInt()){
-			 * 		JOptionPane.showMessageDialog(contentPane, "Cannot load specified user profile.", "Error",
-						JOptionPane.ERROR_MESSAGE);
-			 * }
+			 * JOptionPane.showMessageDialog(contentPane,
+			 * "Cannot load specified user profile.", "Error",
+			 * JOptionPane.ERROR_MESSAGE); }
 			 */
 			while (true) {
 				state = Edk.INSTANCE.EE_EngineGetNextEvent(eEvent);
@@ -379,8 +381,9 @@ public class DataCollect extends JFrame {
 						if (EmoState.INSTANCE.ES_ExpressivIsRightWink(eState) == 1) {
 							current.add("Logged: Right wink");
 						}
-						
-						String upperState = reverseLookupExpressiv(EmoState.INSTANCE.ES_ExpressivGetUpperFaceAction(eState));
+
+						String upperState = reverseLookupExpressiv(
+								EmoState.INSTANCE.ES_ExpressivGetUpperFaceAction(eState));
 						if (upperState != null) {
 							current.add("Detected upper face state: " + upperState + ", Power: "
 									+ EmoState.INSTANCE.ES_ExpressivGetUpperFaceActionPower(eState));
@@ -388,22 +391,26 @@ public class DataCollect extends JFrame {
 							current.add("Detected upper face state: none");
 						}
 
-						String lowerState = reverseLookupExpressiv(EmoState.INSTANCE.ES_ExpressivGetLowerFaceAction(eState));
+						String lowerState = reverseLookupExpressiv(
+								EmoState.INSTANCE.ES_ExpressivGetLowerFaceAction(eState));
 						if (lowerState != null) {
 							current.add("Detected lower face state: " + lowerState + ", Power: "
 									+ EmoState.INSTANCE.ES_ExpressivGetLowerFaceActionPower(eState));
 						} else {
 							current.add("Detected lower face state: none");
 						}
-						
-						current.add("Engagement/Boredom Score: " + EmoState.INSTANCE.ES_AffectivGetEngagementBoredomScore(eState));
-						current.add("Excitement (Short Term) Score: " + EmoState.INSTANCE.ES_AffectivGetExcitementShortTermScore(eState));
-						current.add("Excitement (Long Term) Score: " + EmoState.INSTANCE.ES_AffectivGetExcitementLongTermScore(eState));
+
+						current.add("Engagement/Boredom Score: "
+								+ EmoState.INSTANCE.ES_AffectivGetEngagementBoredomScore(eState));
+						current.add("Excitement (Short Term) Score: "
+								+ EmoState.INSTANCE.ES_AffectivGetExcitementShortTermScore(eState));
+						current.add("Excitement (Long Term) Score: "
+								+ EmoState.INSTANCE.ES_AffectivGetExcitementLongTermScore(eState));
 						current.add("Frustration Score: " + EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState));
 						current.add("Meditation Score: " + EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState));
-						
+
 						String action = reverseLookupCognitiv(EmoState.INSTANCE.ES_CognitivGetCurrentAction(eState));
-						if(action != null){
+						if (action != null) {
 							current.add("Detected action: " + action + ", Power: "
 									+ EmoState.INSTANCE.ES_CognitivGetCurrentActionPower(eState));
 						}
@@ -418,7 +425,7 @@ public class DataCollect extends JFrame {
 					case 1:
 						if (startTime == 0) {
 							publish(new Data(DASH, "Calibrating for 20 seconds. Please keep calm."));
-							current.add("=========CALIBRATION DATA=========");
+							current.add("==================CALIBRATION DATA==================");
 							startTime = System.currentTimeMillis();
 						} else if (System.currentTimeMillis() - startTime > INIT_CALIBRATION_TIME) {
 							toWrite.add(current);
@@ -433,7 +440,8 @@ public class DataCollect extends JFrame {
 						if (startTime == 0) {
 							int nextIndex = genNextImage();
 							publish(new Data(nextIndex, updateCounter()));
-							current.add("=========IMAGE " + currentImageNumber + ": " + NAMES[nextIndex] + "=========");
+							current.add("==================IMAGE " + currentImageNumber + ": " + NAMES[nextIndex]
+									+ "==================");
 							startTime = System.currentTimeMillis();
 						} else if (System.currentTimeMillis() - startTime > EXPRESSION_TIME) {
 							toWrite.add(current);
@@ -450,10 +458,10 @@ public class DataCollect extends JFrame {
 						}
 						break;
 					case 3:
-						publish(new Data(END, "Writing file"));
+						publish(new Data(DASH, "Writing file"));
 						Date date = new Date();
-						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
-						File file = new File(FILE_PATH + "EPOC/" + dateFormat.format(date) + ".txt");
+						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
+						File file = new File(dateFormat.format(date) + "-EPOC" + ".txt");
 						BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 						for (List<String> trials : toWrite) {
 							for (String s : trials) {
@@ -489,14 +497,15 @@ public class DataCollect extends JFrame {
 			}
 			return null;
 		}
-		
+
 		private String reverseLookupCognitiv(int value) {
-			for(EmoState.EE_CognitivAction_t action : EmoState.EE_CognitivAction_t.values()){
-				if(value == action.ToInt()){
+			for (EmoState.EE_CognitivAction_t action : EmoState.EE_CognitivAction_t.values()) {
+				if (value == action.ToInt()) {
 					return action.name();
 				}
 			}
 			return null;
+			
 		}
 	}
 
