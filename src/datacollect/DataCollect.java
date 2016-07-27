@@ -49,10 +49,7 @@ public class DataCollect extends JFrame {
 	private static final int INIT_CALIBRATION_TIME = 10000;
 	private static final int EXPRESSION_TIME = 5000;
 	private static final int CALM_TIME = 1000;
-	private static final int DASH = 9;
-	private static final int END = 10;
-	private static final String[] NAMES = { "angry.jpg", "closeeye.jpg", "eyebrow.jpg", "mouthL.jpg", "mouthR.jpg",
-			"smile.jpg", "winkL.jpg", "winkR.jpg", "surprise.jpg", "dash.jpg", "done.jpg" };
+	
 
 	private List<JLabel> images = new ArrayList<JLabel>();;
 
@@ -147,7 +144,6 @@ public class DataCollect extends JFrame {
 							JOptionPane.ERROR_MESSAGE);
 				}
 			}
-
 		});
 
 		epoc = new JRadioButton("EPOC");
@@ -185,7 +181,7 @@ public class DataCollect extends JFrame {
 	}
 
 	private void init() {
-		for (String s : NAMES) {
+		for (String s : DataConstants.NAMES) {
 			addNewImage(s);
 		}
 	}
@@ -258,7 +254,7 @@ public class DataCollect extends JFrame {
 
 		@Override
 		protected Void doInBackground() throws Exception {
-			publish(new Data(DASH, "Calibrating for 20 seconds. Please keep calm."));
+			publish(new Data(DataConstants.DASH, "Calibrating for 20 seconds. Please keep calm."));
 			List<String> current = new ArrayList<String>();
 			current.add("==================CALIBRATION DATA==================");
 			long time = System.currentTimeMillis();
@@ -272,7 +268,7 @@ public class DataCollect extends JFrame {
 				int nextIndex = genNextImage();
 				current = new ArrayList<String>();
 				publish(new Data(nextIndex, updateCounter()));
-				current.add("==================IMAGE " + currentImageNumber + ": " + NAMES[nextIndex]
+				current.add("==================IMAGE " + currentImageNumber + ": " + DataConstants.NAMES[nextIndex]
 						+ "==================");
 				time = System.currentTimeMillis();
 				while (System.currentTimeMillis() - time < EXPRESSION_TIME) {
@@ -280,10 +276,10 @@ public class DataCollect extends JFrame {
 				}
 				toWrite.add(current);
 				time = System.currentTimeMillis();
-				publish(new Data(DASH, ""));
+				publish(new Data(DataConstants.DASH, ""));
 				Thread.sleep(CALM_TIME);
 			}
-			publish(new Data(DASH, "Writing file"));
+			publish(new Data(DataConstants.DASH, "Writing file"));
 			Date date = new Date();
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 			File file = new File(dateFormat.format(date) + "-NeuroSky" + ".txt");
@@ -295,7 +291,7 @@ public class DataCollect extends JFrame {
 				}
 			}
 			bw.close();
-			publish(new Data(END, "File writing completed"));
+			publish(new Data(DataConstants.END, "File writing completed"));
 			return null;
 		}
 	}
@@ -341,7 +337,7 @@ public class DataCollect extends JFrame {
 			int currentCycle = 0;
 			int state = 0;
 			int stage = 1;
-			int currentImage = DASH;
+			int currentImage = DataConstants.DASH;
 			/*
 			 * Optional: User profile loading; replace "userID" with a valid
 			 * user id and fileLocation with the profile path int userLoading =
@@ -435,7 +431,7 @@ public class DataCollect extends JFrame {
 						} else {
 							sb.append(none);
 						}
-						if (currentImage == DASH) {
+						if (currentImage == DataConstants.DASH) {
 							sb.append(0);
 						} else {
 							int imageNo = currentImage + 1;
@@ -452,7 +448,7 @@ public class DataCollect extends JFrame {
 					switch (stage) {
 					case 1:
 						if (startTime == 0) {
-							publish(new Data(DASH, "Calibrating for 20 seconds. Please keep calm."));
+							publish(new Data(DataConstants.DASH, "Calibrating for 20 seconds. Please keep calm."));
 							startTime = System.currentTimeMillis();
 						} else if (System.currentTimeMillis() - startTime > INIT_CALIBRATION_TIME) {
 							toWrite.add(current);
@@ -480,14 +476,14 @@ public class DataCollect extends JFrame {
 								stage++;
 							} else {
 								startTime = 0;
-								publish(new Data(DASH, ""));
+								publish(new Data(DataConstants.DASH, ""));
 								Thread.sleep(CALM_TIME);
 							}
 							continue;
 						}
 						break;
 					case 3:
-						publish(new Data(DASH, "Writing file"));
+						publish(new Data(DataConstants.DASH, "Writing file"));
 						Date date = new Date();
 						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
 						File file = new File(dateFormat.format(date) + "-EPOC_RAW" + ".csv");
@@ -507,7 +503,7 @@ public class DataCollect extends JFrame {
 							}
 						}
 						bw.close();
-						publish(new Data(END, "File writing completed"));
+						publish(new Data(DataConstants.END, "File writing completed"));
 						return null;
 					}
 					Edk.INSTANCE.EE_DataUpdateHandle(0, hData);
@@ -522,7 +518,7 @@ public class DataCollect extends JFrame {
 							}
 							StringBuilder sb = new StringBuilder();
 							sb.append(rawEEGToString(set));
-							if (currentImage == DASH) {
+							if (currentImage == DataConstants.DASH) {
 								sb.append(0);
 							} else {
 								int imageNo = currentImage + 1;
