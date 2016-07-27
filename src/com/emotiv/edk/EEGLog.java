@@ -86,7 +86,6 @@ public class EEGLog {
 						double[] data = new double[nSamplesTaken.getValue()];
 						for (int sampleIdx = 0; sampleIdx < nSamplesTaken.getValue(); ++sampleIdx) {
 							for (int i = 0; i < 14; i++) {
-
 								Edk.INSTANCE.EE_DataGet(hData, i, data, nSamplesTaken.getValue());
 								System.out.print(data[sampleIdx]);
 								System.out.print(",");

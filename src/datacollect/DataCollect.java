@@ -17,7 +17,6 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
@@ -47,13 +46,13 @@ public class DataCollect extends JFrame {
 	// Modify the following constants as needed
 	private static final String IMAGE_PATH = "images/";
 	private static final int DEFAULT_REPETITION = 20;
-	private static final int INIT_CALIBRATION_TIME = 20000;
+	private static final int INIT_CALIBRATION_TIME = 10000;
 	private static final int EXPRESSION_TIME = 5000;
 	private static final int CALM_TIME = 1000;
 	private static final int DASH = 9;
 	private static final int END = 10;
 	private static final String[] NAMES = { "angry.jpg", "closeeye.jpg", "eyebrow.jpg", "mouthL.jpg", "mouthR.jpg",
-			"smile.jpg", "winkL.jpg", "winkR.jpg", "countdown.jpg", "dash.jpg", "done.jpg" };
+			"smile.jpg", "winkL.jpg", "winkR.jpg", "surprise.jpg", "dash.jpg", "done.jpg" };
 
 	private List<JLabel> images = new ArrayList<JLabel>();;
 
@@ -310,6 +309,7 @@ public class DataCollect extends JFrame {
 		Pointer hData;
 		IntByReference userID;
 		IntByReference nSamplesTaken;
+		List<List<String>> toWriteSuite = new ArrayList<List<String>>();
 
 		public RecordEpoc(int cycles) {
 			super(cycles);
@@ -330,11 +330,18 @@ public class DataCollect extends JFrame {
 
 		@Override
 		protected Void doInBackground() throws Exception {
+			String none = "null,0,";
 			List<String> current = new ArrayList<String>();
+			current.add(
+					"COUNTER,INTERPOLATED,RAW_CQ,AF3,F7,F3,FC5,T7,P7,O1,O2,P8,T8,FC6,F4,F8,AF4,GYROX,GYROY,TIMESTAMP,ES_TIMESTAMPFUNC_ID,FUNC_VALUE,MARKER,SYNC_SIGNAL,IMAGE");
+			List<String> currentSuite = new ArrayList<String>();
+			currentSuite.add(
+					"TIME,BLINK,EYES_OPEN,LEFT_WINK,LOOKING_DOWN,LOOKING_LEFT,LOOKING_RIGHT,LOOKING_UP,RIGHT_WINK,UPPER_FACE,UPPER_POWER,LOWER_FACE,LOWER_POWER,ENGAGEMENTBOREDOM,EXCITEMENT_SHORT,EXCITEMENT_LONG,FRUSTRATION,MEDITATION,COG_ACTION,COG_POWER,IMAGE");
 			long startTime = 0;
 			int currentCycle = 0;
 			int state = 0;
 			int stage = 1;
+			int currentImage = DASH;
 			/*
 			 * Optional: User profile loading; replace "userID" with a valid
 			 * user id and fileLocation with the profile path int userLoading =
@@ -356,64 +363,85 @@ public class DataCollect extends JFrame {
 						}
 					}
 					if (eventType == Edk.EE_Event_t.EE_EmoStateUpdated.ToInt()) {
+						StringBuilder sb = new StringBuilder();
+						sb.append(EmoState.INSTANCE.ES_GetTimeFromStart(eState) + ",");
 						Edk.INSTANCE.EE_EmoEngineEventGetEmoState(eEvent, eState);
 						if (EmoState.INSTANCE.ES_ExpressivIsBlink(eState) == 1) {
-							current.add("Logged: Blink");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsEyesOpen(eState) == 1) {
-							current.add("Logged: Eyes opened");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsLeftWink(eState) == 1) {
-							current.add("Logged: Left wink");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsLookingDown(eState) == 1) {
-							current.add("Logged: Looking down");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsLookingLeft(eState) == 1) {
-							current.add("Logged: Looking left");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsLookingRight(eState) == 1) {
-							current.add("Logged: Looking right");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsLookingUp(eState) == 1) {
-							current.add("Logged: Looking up");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 						if (EmoState.INSTANCE.ES_ExpressivIsRightWink(eState) == 1) {
-							current.add("Logged: Right wink");
+							sb.append("True,");
+						} else {
+							sb.append("False,");
 						}
 
 						String upperState = reverseLookupExpressiv(
 								EmoState.INSTANCE.ES_ExpressivGetUpperFaceAction(eState));
 						if (upperState != null) {
-							current.add("Detected upper face state: " + upperState + ", Power: "
-									+ EmoState.INSTANCE.ES_ExpressivGetUpperFaceActionPower(eState));
+							sb.append(upperState + "," + EmoState.INSTANCE.ES_ExpressivGetUpperFaceActionPower(eState)
+									+ ",");
 						} else {
-							current.add("Detected upper face state: none");
+							sb.append(none);
 						}
-
 						String lowerState = reverseLookupExpressiv(
 								EmoState.INSTANCE.ES_ExpressivGetLowerFaceAction(eState));
 						if (lowerState != null) {
-							current.add("Detected lower face state: " + lowerState + ", Power: "
-									+ EmoState.INSTANCE.ES_ExpressivGetLowerFaceActionPower(eState));
+							sb.append(lowerState + "," + EmoState.INSTANCE.ES_ExpressivGetLowerFaceActionPower(eState)
+									+ ",");
 						} else {
-							current.add("Detected lower face state: none");
+							sb.append(none);
 						}
-
-						current.add("Engagement/Boredom Score: "
-								+ EmoState.INSTANCE.ES_AffectivGetEngagementBoredomScore(eState));
-						current.add("Excitement (Short Term) Score: "
-								+ EmoState.INSTANCE.ES_AffectivGetExcitementShortTermScore(eState));
-						current.add("Excitement (Long Term) Score: "
-								+ EmoState.INSTANCE.ES_AffectivGetExcitementLongTermScore(eState));
-						current.add("Frustration Score: " + EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState));
-						current.add("Meditation Score: " + EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState));
+						sb.append(EmoState.INSTANCE.ES_AffectivGetEngagementBoredomScore(eState) + ",");
+						sb.append(EmoState.INSTANCE.ES_AffectivGetExcitementShortTermScore(eState) + ",");
+						sb.append(EmoState.INSTANCE.ES_AffectivGetExcitementLongTermScore(eState) + ",");
+						sb.append(EmoState.INSTANCE.ES_AffectivGetFrustrationScore(eState) + ",");
+						sb.append(EmoState.INSTANCE.ES_AffectivGetMeditationScore(eState) + ",");
 
 						String action = reverseLookupCognitiv(EmoState.INSTANCE.ES_CognitivGetCurrentAction(eState));
 						if (action != null) {
-							current.add("Detected action: " + action + ", Power: "
-									+ EmoState.INSTANCE.ES_CognitivGetCurrentActionPower(eState));
+							sb.append(action + "," + EmoState.INSTANCE.ES_CognitivGetCurrentActionPower(eState) + ",");
+						} else {
+							sb.append(none);
 						}
+						if (currentImage == DASH) {
+							sb.append(0);
+						} else {
+							int imageNo = currentImage + 1;
+							sb.append(imageNo);
+						}
+						currentSuite.add(sb.toString());
 					}
 				} else if (state != EdkErrorCode.EDK_NO_EVENT.ToInt()) {
 					JOptionPane.showMessageDialog(contentPane, "Cannot connect to EPOC. Check your device.", "Error",
@@ -425,11 +453,12 @@ public class DataCollect extends JFrame {
 					case 1:
 						if (startTime == 0) {
 							publish(new Data(DASH, "Calibrating for 20 seconds. Please keep calm."));
-							current.add("==================CALIBRATION DATA==================");
 							startTime = System.currentTimeMillis();
 						} else if (System.currentTimeMillis() - startTime > INIT_CALIBRATION_TIME) {
 							toWrite.add(current);
+							toWriteSuite.add(currentSuite);
 							current = new ArrayList<String>();
+							currentSuite = new ArrayList<String>();
 							stage++;
 							currentCycle++;
 							startTime = 0;
@@ -438,14 +467,14 @@ public class DataCollect extends JFrame {
 						break;
 					case 2:
 						if (startTime == 0) {
-							int nextIndex = genNextImage();
-							publish(new Data(nextIndex, updateCounter()));
-							current.add("==================IMAGE " + currentImageNumber + ": " + NAMES[nextIndex]
-									+ "==================");
+							currentImage = genNextImage();
+							publish(new Data(currentImage, updateCounter()));
 							startTime = System.currentTimeMillis();
 						} else if (System.currentTimeMillis() - startTime > EXPRESSION_TIME) {
 							toWrite.add(current);
+							toWriteSuite.add(currentSuite);
 							current = new ArrayList<String>();
+							currentSuite = new ArrayList<String>();
 							currentCycle++;
 							if (currentCycle > cycles) {
 								stage++;
@@ -461,9 +490,17 @@ public class DataCollect extends JFrame {
 						publish(new Data(DASH, "Writing file"));
 						Date date = new Date();
 						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-						File file = new File(dateFormat.format(date) + "-EPOC" + ".txt");
+						File file = new File(dateFormat.format(date) + "-EPOC_RAW" + ".csv");
 						BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 						for (List<String> trials : toWrite) {
+							for (String s : trials) {
+								bw.write(s);
+								bw.newLine();
+							}
+						}
+						file = new File(dateFormat.format(date) + "-EPOC_SUITE" + ".csv");
+						bw = new BufferedWriter(new FileWriter(file));
+						for (List<String> trials : toWriteSuite) {
 							for (String s : trials) {
 								bw.write(s);
 								bw.newLine();
@@ -478,11 +515,21 @@ public class DataCollect extends JFrame {
 					if (nSamplesTaken != null && nSamplesTaken.getValue() != 0) {
 						double[] data = new double[nSamplesTaken.getValue()];
 						for (int sampleIdx = 0; sampleIdx < nSamplesTaken.getValue(); ++sampleIdx) {
-							for (int i = 0; i < 14; i++) {
+							List<Double> set = new ArrayList<Double>();
+							for (int i = 0; i < 24; i++) {
 								Edk.INSTANCE.EE_DataGet(hData, i, data, nSamplesTaken.getValue());
+								set.add(data[sampleIdx]);
 							}
+							StringBuilder sb = new StringBuilder();
+							sb.append(rawEEGToString(set));
+							if (currentImage == DASH) {
+								sb.append(0);
+							} else {
+								int imageNo = currentImage + 1;
+								sb.append(imageNo);
+							}
+							current.add(sb.toString());
 						}
-						current.add(Arrays.toString(data));
 					}
 				}
 			}
@@ -505,7 +552,14 @@ public class DataCollect extends JFrame {
 				}
 			}
 			return null;
-			
+		}
+
+		private String rawEEGToString(List<Double> list) {
+			String s = "";
+			for (int i = 0; i < list.size(); i++) {
+				s += list.get(i) + "";
+			}
+			return s;
 		}
 	}
 

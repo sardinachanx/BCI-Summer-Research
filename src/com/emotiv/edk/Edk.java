@@ -82,7 +82,7 @@ public interface Edk extends Library {
 		double zLoc; // z coordinate from center of head toward top of skull
 		
 		@Override
-		protected List getFieldOrder() {
+		protected List<?> getFieldOrder() {
 			// TODO Auto-generated method stub
 			return null;
 		}
