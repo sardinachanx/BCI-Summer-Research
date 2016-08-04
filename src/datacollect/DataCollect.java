@@ -49,7 +49,6 @@ public class DataCollect extends JFrame {
 	private static final int INIT_CALIBRATION_TIME = 10000;
 	private static final int EXPRESSION_TIME = 5000;
 	private static final int CALM_TIME = 1000;
-	
 
 	private List<JLabel> images = new ArrayList<JLabel>();;
 
@@ -126,7 +125,7 @@ public class DataCollect extends JFrame {
 						rd = new RecordEpoc(totalImageNumber);
 						rd.execute();
 					} else if (neuroSky.isSelected()) {
-						rd = new RecordNeuro(totalImageNumber);
+						rd = new NewRecordNeuro(totalImageNumber);
 						if (rd.readyToCollect) {
 							rd.execute();
 						} else {
@@ -230,6 +229,7 @@ public class DataCollect extends JFrame {
 
 	}
 
+	@SuppressWarnings("unused")
 	private class RecordNeuro extends RecordData {
 
 		private BufferedReader br;
@@ -254,13 +254,14 @@ public class DataCollect extends JFrame {
 
 		@Override
 		protected Void doInBackground() throws Exception {
-			publish(new Data(DataConstants.DASH, "Calibrating for 20 seconds. Please keep calm."));
+			publish(new Data(DataConstants.DASH,
+					"Calibrating for " + INIT_CALIBRATION_TIME / 1000 + " seconds. Please keep calm."));
 			List<String> current = new ArrayList<String>();
 			current.add("==================CALIBRATION DATA==================");
 			long time = System.currentTimeMillis();
 			while (System.currentTimeMillis() - time < INIT_CALIBRATION_TIME) {
 				String line = br.readLine();
-				current.add(line);
+				current.add((System.currentTimeMillis() - time) + line);
 				System.out.print("");
 			}
 			toWrite.add(current);
@@ -269,7 +270,7 @@ public class DataCollect extends JFrame {
 				current = new ArrayList<String>();
 				publish(new Data(nextIndex, updateCounter()));
 				current.add("==================IMAGE " + currentImageNumber + ": " + DataConstants.NAMES[nextIndex]
-						+ "==================");
+						+ " (" + nextIndex + ")" + "==================");
 				time = System.currentTimeMillis();
 				while (System.currentTimeMillis() - time < EXPRESSION_TIME) {
 					current.add(br.readLine());
@@ -294,6 +295,93 @@ public class DataCollect extends JFrame {
 			publish(new Data(DataConstants.END, "File writing completed"));
 			return null;
 		}
+	}
+
+	private class NewRecordNeuro extends RecordData {
+
+		private BufferedReader br;
+		private BufferedWriter bw;
+
+		public NewRecordNeuro(int cycles) {
+			super(cycles);
+			try {
+				socket = new Socket("127.0.0.1", 13854);
+				InputStream is = socket.getInputStream();
+				OutputStream os = socket.getOutputStream();
+				br = new BufferedReader(new InputStreamReader(is));
+				bw = new BufferedWriter(new OutputStreamWriter(os));
+				bw.write("{\"enableRawOutput\":true,\"format\":\"Json\"}");
+				bw.flush();
+				readyToCollect = true;
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(contentPane, "Cannot connect to NeuroSky.", "Error",
+						JOptionPane.ERROR_MESSAGE);
+			}
+		}
+
+		@Override
+		protected Void doInBackground() throws Exception {
+			publish(new Data(DataConstants.DASH, "Waiting..."));
+			String line = br.readLine();
+			while (!line.startsWith("{\"raw")) {
+				line = br.readLine();
+			}
+			for (int times = 0; times < cycles; times++) {
+				int nextIndex = genNextImage();
+				publish(new Data(nextIndex, updateCounter()));
+				String photoNumber = DataConstants.NAMES[nextIndex] + " (" + nextIndex + ")";
+				List<String> name = new ArrayList<String>();
+				name.add(photoNumber);
+				toWrite.add(name);
+				for (int i = 0; i < 20; i++) {
+					int counter = 0;
+					List<String> current = new ArrayList<String>();
+					while (counter < 256) {
+						line = br.readLine();
+						if (line.startsWith("{\"raw")) {
+							counter++;
+						}
+						current.add(line);
+					}
+					toWrite.add(current);
+				}
+				publish(new Data(DataConstants.DASH, ""));
+				long time = System.currentTimeMillis();
+				while (System.currentTimeMillis() - time < CALM_TIME) {
+					br.readLine();
+				}
+
+			}
+			publish(new Data(DataConstants.DASH, "Writing file"));
+			Date date = new Date();
+			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+			String sp = File.separator;
+			String location = "data" + sp + "neurosky" + sp + dateFormat.format(date) + sp;
+			BufferedWriter fw = null;
+			for (int i = 0; i < cycles; i++) {
+				for (int j = 0; j < 21; j++) {
+					List<String> write = toWrite.get(i * 21 + j);
+					// System.out.println(write);
+					File file = null;
+					if (j == 0) {
+						file = new File(location + i + sp + "name.txt");
+
+					} else {
+						file = new File(location + i + sp + (j + 1) + ".json");
+					}
+					file.getParentFile().mkdirs();
+					fw = new BufferedWriter(new FileWriter(file));
+					for (String s : write) {
+						fw.write(s);
+						fw.newLine();
+					}
+					fw.close();
+				}
+			}
+			publish(new Data(DataConstants.END, "File writing completed"));
+			return null;
+		}
+
 	}
 
 	private class RecordEpoc extends RecordData {
@@ -485,8 +573,10 @@ public class DataCollect extends JFrame {
 					case 3:
 						publish(new Data(DataConstants.DASH, "Writing file"));
 						Date date = new Date();
-						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-						File file = new File(dateFormat.format(date) + "-EPOC_RAW" + ".csv");
+						SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+						File file = new File("data" + File.separator + "epoc" + File.separator + dateFormat.format(date)
+								+ File.separator + "EPOC_RAW" + ".csv");
+						file.getParentFile().mkdirs();
 						BufferedWriter bw = new BufferedWriter(new FileWriter(file));
 						for (List<String> trials : toWrite) {
 							for (String s : trials) {
@@ -494,7 +584,9 @@ public class DataCollect extends JFrame {
 								bw.newLine();
 							}
 						}
-						file = new File(dateFormat.format(date) + "-EPOC_SUITE" + ".csv");
+						file = new File("data" + File.separator + "epoc" + File.separator + dateFormat.format(date)
+						+ File.separator + "EPOC_SUITE" + ".csv");
+						file.getParentFile().mkdirs();
 						bw = new BufferedWriter(new FileWriter(file));
 						for (List<String> trials : toWriteSuite) {
 							for (String s : trials) {
