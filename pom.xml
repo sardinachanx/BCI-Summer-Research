@@ -61,5 +61,17 @@
 			<scope>system</scope>
 			<systemPath>C:\Program Files (x86)\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM\doc\examples_Java\lib\jna.jar</systemPath>
 		</dependency>
+		<dependency>
+			<groupId>com.mkobos</groupId>
+			<artifactId>pca_transform</artifactId>
+			<version>1.0.2</version>
+		</dependency>
+		<dependency>
+			<groupId>sample</groupId>
+			<artifactId>libsvm</artifactId>
+			<version>3.21</version>
+			<scope>system</scope>
+			<systemPath>C:\Program Files (x86)\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM\doc\examples_Java\lib\libsvm.jar</systemPath>
+		</dependency>
 	</dependencies>
 </project>
