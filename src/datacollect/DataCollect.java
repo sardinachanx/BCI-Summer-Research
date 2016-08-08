@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,7 +19,9 @@ import java.net.Socket;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.swing.BoxLayout;
@@ -34,6 +37,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.border.EmptyBorder;
 
+import org.json.JSONObject;
+
 import com.emotiv.edk.Edk;
 import com.emotiv.edk.EdkErrorCode;
 import com.emotiv.edk.EmoState;
@@ -45,10 +50,12 @@ public class DataCollect extends JFrame {
 	private static final long serialVersionUID = -3478409869011707701L;
 	// Modify the following constants as needed
 	private static final String IMAGE_PATH = "images/";
+	private static final String FREQUENCY_PATH = "data/neurosky/frequency.dat";
 	private static final int DEFAULT_REPETITION = 20;
+	private static final int INIT_WAIT_TIME = 2000;
 	private static final int INIT_CALIBRATION_TIME = 10000;
 	private static final int EXPRESSION_TIME = 5000;
-	private static final int CALM_TIME = 1000;
+	private static final int CALM_TIME = 2000;
 
 	private List<JLabel> images = new ArrayList<JLabel>();;
 
@@ -62,6 +69,7 @@ public class DataCollect extends JFrame {
 	private int currentImageNumber;
 	private int totalImageNumber;
 	private Socket socket;
+	private JSONObject frequency;
 
 	/**
 	 * Launch the application.
@@ -92,6 +100,17 @@ public class DataCollect extends JFrame {
 		currentImageNumber = 0;
 		totalImageNumber = DEFAULT_REPETITION;
 		init();
+
+		try {
+			String s = readFrequencyData(new File(FREQUENCY_PATH));
+			frequency = new JSONObject(s);
+		} catch (IOException e) {
+			Map<String, Integer> newFrequency = new HashMap<String, Integer>();
+			for (int i = 0; i < DataConstants.EFT_LENGTH; i++) {
+				newFrequency.put(DataConstants.NAMES[i], 0);
+			}
+			frequency = new JSONObject(newFrequency);
+		}
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 600);
@@ -177,6 +196,11 @@ public class DataCollect extends JFrame {
 		ButtonGroup buttonGroup = new ButtonGroup();
 		buttonGroup.add(epoc);
 		buttonGroup.add(neuroSky);
+
+		if (satisfied()) {
+			JOptionPane.showMessageDialog(contentPane, "All images already have 20 trials!", "Notification",
+					JOptionPane.INFORMATION_MESSAGE);
+		}
 	}
 
 	private void init() {
@@ -196,7 +220,6 @@ public class DataCollect extends JFrame {
 			JLabel label = new JLabel(new ImageIcon(image));
 			images.add(label);
 		} catch (IOException e) {
-
 			JOptionPane.showMessageDialog(contentPane, "Image initialization error.", "Error",
 					JOptionPane.ERROR_MESSAGE);
 			System.exit(1);
@@ -204,7 +227,41 @@ public class DataCollect extends JFrame {
 	}
 
 	private int genNextImage() {
-		return (int) (Math.random() * (images.size() - 2));
+		if (satisfied()) {
+			JOptionPane.showMessageDialog(contentPane, "All images have 20 samples already!", "Notification",
+					JOptionPane.INFORMATION_MESSAGE);
+			return (int) (Math.random() * (DataConstants.EFT_LENGTH));
+		}
+		int random = (int) (Math.random() * (DataConstants.EFT_LENGTH));
+		while (frequency.getInt(DataConstants.NAMES[random]) >= 20) {
+			random = (int) (Math.random() * (DataConstants.EFT_LENGTH));
+		}
+		return random;
+	}
+
+	private boolean satisfied() {
+		int count = 0;
+		for (int i = 0; i < DataConstants.EFT_LENGTH; i++) {
+			if (frequency.getInt(DataConstants.NAMES[i]) >= 20) {
+				count++;
+			}
+		}
+		if (count == DataConstants.EFT_LENGTH) {
+			return true;
+		}
+		return false;
+	}
+
+	private String readFrequencyData(File file) throws IOException {
+		BufferedReader br = null;
+		try {
+			br = new BufferedReader(new FileReader(file));
+			return br.readLine();
+		} finally {
+			if (br != null) {
+				br.close();
+			}
+		}
 	}
 
 	private abstract class RecordData extends SwingWorker<Void, Data> {
@@ -226,76 +283,50 @@ public class DataCollect extends JFrame {
 				counter.setText(d.message);
 			}
 		}
-
 	}
 
-	@SuppressWarnings("unused")
-	private class RecordNeuro extends RecordData {
-
-		private BufferedReader br;
-		private BufferedWriter bw;
-
-		public RecordNeuro(int cycles) {
-			super(cycles);
-			try {
-				socket = new Socket("127.0.0.1", 13854);
-				InputStream is = socket.getInputStream();
-				OutputStream os = socket.getOutputStream();
-				br = new BufferedReader(new InputStreamReader(is));
-				bw = new BufferedWriter(new OutputStreamWriter(os));
-				bw.write("{\"enableRawOutput\":true,\"format\":\"Json\"}");
-				bw.flush();
-				readyToCollect = true;
-			} catch (IOException e) {
-				JOptionPane.showMessageDialog(contentPane, "Cannot connect to NeuroSky.", "Error",
-						JOptionPane.ERROR_MESSAGE);
-			}
-		}
-
-		@Override
-		protected Void doInBackground() throws Exception {
-			publish(new Data(DataConstants.DASH,
-					"Calibrating for " + INIT_CALIBRATION_TIME / 1000 + " seconds. Please keep calm."));
-			List<String> current = new ArrayList<String>();
-			current.add("==================CALIBRATION DATA==================");
-			long time = System.currentTimeMillis();
-			while (System.currentTimeMillis() - time < INIT_CALIBRATION_TIME) {
-				String line = br.readLine();
-				current.add((System.currentTimeMillis() - time) + line);
-				System.out.print("");
-			}
-			toWrite.add(current);
-			for (int i = 0; i < cycles; i++) {
-				int nextIndex = genNextImage();
-				current = new ArrayList<String>();
-				publish(new Data(nextIndex, updateCounter()));
-				current.add("==================IMAGE " + currentImageNumber + ": " + DataConstants.NAMES[nextIndex]
-						+ " (" + nextIndex + ")" + "==================");
-				time = System.currentTimeMillis();
-				while (System.currentTimeMillis() - time < EXPRESSION_TIME) {
-					current.add(br.readLine());
-				}
-				toWrite.add(current);
-				time = System.currentTimeMillis();
-				publish(new Data(DataConstants.DASH, ""));
-				Thread.sleep(CALM_TIME);
-			}
-			publish(new Data(DataConstants.DASH, "Writing file"));
-			Date date = new Date();
-			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HHmmss");
-			File file = new File(dateFormat.format(date) + "-NeuroSky" + ".txt");
-			BufferedWriter bw = new BufferedWriter(new FileWriter(file));
-			for (List<String> trials : toWrite) {
-				for (String s : trials) {
-					bw.write(s);
-					bw.newLine();
-				}
-			}
-			bw.close();
-			publish(new Data(DataConstants.END, "File writing completed"));
-			return null;
-		}
-	}
+	/*
+	 * @SuppressWarnings("unused") private class RecordNeuro extends RecordData
+	 * {
+	 * 
+	 * private BufferedReader br; private BufferedWriter bw;
+	 * 
+	 * public RecordNeuro(int cycles) { super(cycles); try { socket = new
+	 * Socket("127.0.0.1", 13854); InputStream is = socket.getInputStream();
+	 * OutputStream os = socket.getOutputStream(); br = new BufferedReader(new
+	 * InputStreamReader(is)); bw = new BufferedWriter(new
+	 * OutputStreamWriter(os));
+	 * bw.write("{\"enableRawOutput\":true,\"format\":\"Json\"}"); bw.flush();
+	 * readyToCollect = true; } catch (IOException e) {
+	 * JOptionPane.showMessageDialog(contentPane, "Cannot connect to NeuroSky.",
+	 * "Error", JOptionPane.ERROR_MESSAGE); } }
+	 * 
+	 * @Override protected Void doInBackground() throws Exception { publish(new
+	 * Data(DataConstants.DASH, "Calibrating for " + INIT_CALIBRATION_TIME /
+	 * 1000 + " seconds. Please keep calm.")); List<String> current = new
+	 * ArrayList<String>();
+	 * current.add("==================CALIBRATION DATA=================="); long
+	 * time = System.currentTimeMillis(); while (System.currentTimeMillis() -
+	 * time < INIT_CALIBRATION_TIME) { String line = br.readLine();
+	 * current.add((System.currentTimeMillis() - time) + line);
+	 * System.out.print(""); } toWrite.add(current); for (int i = 0; i < cycles;
+	 * i++) { int nextIndex = genNextImage(); current = new ArrayList<String>();
+	 * publish(new Data(nextIndex, updateCounter()));
+	 * current.add("==================IMAGE " + currentImageNumber + ": " +
+	 * DataConstants.NAMES[nextIndex] + " (" + nextIndex + ")" +
+	 * "=================="); time = System.currentTimeMillis(); while
+	 * (System.currentTimeMillis() - time < EXPRESSION_TIME) {
+	 * current.add(br.readLine()); } toWrite.add(current); time =
+	 * System.currentTimeMillis(); publish(new Data(DataConstants.DASH, ""));
+	 * Thread.sleep(CALM_TIME); } publish(new Data(DataConstants.DASH,
+	 * "Writing file")); Date date = new Date(); SimpleDateFormat dateFormat =
+	 * new SimpleDateFormat("yyyy-MM-dd HHmmss"); File file = new
+	 * File(dateFormat.format(date) + "-NeuroSky" + ".txt"); BufferedWriter bw =
+	 * new BufferedWriter(new FileWriter(file)); for (List<String> trials :
+	 * toWrite) { for (String s : trials) { bw.write(s); bw.newLine(); } }
+	 * bw.close(); publish(new Data(DataConstants.END,
+	 * "File writing completed")); return null; } }
+	 */
 
 	private class NewRecordNeuro extends RecordData {
 
@@ -326,11 +357,32 @@ public class DataCollect extends JFrame {
 			while (!line.startsWith("{\"raw")) {
 				line = br.readLine();
 			}
+			long time = System.currentTimeMillis();
+			while (System.currentTimeMillis() - time < INIT_WAIT_TIME) {
+				line = br.readLine();
+			}
+			publish(new Data(DataConstants.DASH, "Calibrating..."));
+			List<String> name = new ArrayList<String>();
+			name.add("calibration");
+			toWrite.add(name);
+			for (int i = 0; i < 20; i++) {
+				int counter = 0;
+				List<String> current = new ArrayList<String>();
+				while (counter < 256) {
+					line = br.readLine();
+					if (line.startsWith("{\"raw")) {
+						counter++;
+					}
+					current.add(line);
+				}
+				toWrite.add(current);
+			}
 			for (int times = 0; times < cycles; times++) {
 				int nextIndex = genNextImage();
 				publish(new Data(nextIndex, updateCounter()));
+				//frequency.put(DataConstants.NAMES[nextIndex], frequency.getInt(DataConstants.NAMES[nextIndex]) + 1);
 				String photoNumber = DataConstants.NAMES[nextIndex] + " (" + nextIndex + ")";
-				List<String> name = new ArrayList<String>();
+				name = new ArrayList<String>();
 				name.add(photoNumber);
 				toWrite.add(name);
 				for (int i = 0; i < 20; i++) {
@@ -346,28 +398,35 @@ public class DataCollect extends JFrame {
 					toWrite.add(current);
 				}
 				publish(new Data(DataConstants.DASH, ""));
-				long time = System.currentTimeMillis();
+				time = System.currentTimeMillis();
 				while (System.currentTimeMillis() - time < CALM_TIME) {
 					br.readLine();
 				}
-
 			}
 			publish(new Data(DataConstants.DASH, "Writing file"));
 			Date date = new Date();
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
 			String sp = File.separator;
-			String location = "data" + sp + "neurosky" + sp + dateFormat.format(date) + sp;
+			String location = "data" + sp + "neurosky" + sp + "experimental" + sp + dateFormat.format(date) + sp;
 			BufferedWriter fw = null;
-			for (int i = 0; i < cycles; i++) {
+			for (int i = 0; i <= cycles; i++) {
 				for (int j = 0; j < 21; j++) {
 					List<String> write = toWrite.get(i * 21 + j);
 					// System.out.println(write);
 					File file = null;
 					if (j == 0) {
-						file = new File(location + i + sp + "name.txt");
+						if (i == 0) {
+							file = new File(location + "calib" + sp + "name.txt");
+						} else {
+							file = new File(location + i + sp + "name.txt");
+						}
 
 					} else {
-						file = new File(location + i + sp + (j + 1) + ".json");
+						if (i == 0) {
+							file = new File(location + "calib" + sp + j + ".json");
+						} else {
+							file = new File(location + i + sp + j + ".json");
+						}
 					}
 					file.getParentFile().mkdirs();
 					fw = new BufferedWriter(new FileWriter(file));
@@ -378,10 +437,12 @@ public class DataCollect extends JFrame {
 					fw.close();
 				}
 			}
+			//fw = new BufferedWriter(new FileWriter(new File(FREQUENCY_PATH)));
+			//fw.write(frequency.toString());
+			//fw.close();
 			publish(new Data(DataConstants.END, "File writing completed"));
 			return null;
 		}
-
 	}
 
 	private class RecordEpoc extends RecordData {
@@ -585,7 +646,7 @@ public class DataCollect extends JFrame {
 							}
 						}
 						file = new File("data" + File.separator + "epoc" + File.separator + dateFormat.format(date)
-						+ File.separator + "EPOC_SUITE" + ".csv");
+								+ File.separator + "EPOC_SUITE" + ".csv");
 						file.getParentFile().mkdirs();
 						bw = new BufferedWriter(new FileWriter(file));
 						for (List<String> trials : toWriteSuite) {
