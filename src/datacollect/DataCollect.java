@@ -83,7 +83,7 @@ public class DataCollect extends JFrame {
 			@Override
 			public void run() {
 				try {
-					DataCollect frame = new DataCollect();
+					DataCollect frame = new DataCollect("Data Collection");
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -95,8 +95,9 @@ public class DataCollect extends JFrame {
 	/**
 	 * Create the frame.
 	 */
-	public DataCollect() {
+	public DataCollect(String name) {
 
+		super(name);
 		currentImageNumber = 0;
 		totalImageNumber = DEFAULT_REPETITION;
 		init();
@@ -380,7 +381,8 @@ public class DataCollect extends JFrame {
 			for (int times = 0; times < cycles; times++) {
 				int nextIndex = genNextImage();
 				publish(new Data(nextIndex, updateCounter()));
-				//frequency.put(DataConstants.NAMES[nextIndex], frequency.getInt(DataConstants.NAMES[nextIndex]) + 1);
+				// frequency.put(DataConstants.NAMES[nextIndex],
+				// frequency.getInt(DataConstants.NAMES[nextIndex]) + 1);
 				String photoNumber = DataConstants.NAMES[nextIndex] + " (" + nextIndex + ")";
 				name = new ArrayList<String>();
 				name.add(photoNumber);
@@ -437,9 +439,10 @@ public class DataCollect extends JFrame {
 					fw.close();
 				}
 			}
-			//fw = new BufferedWriter(new FileWriter(new File(FREQUENCY_PATH)));
-			//fw.write(frequency.toString());
-			//fw.close();
+			// fw = new BufferedWriter(new FileWriter(new
+			// File(FREQUENCY_PATH)));
+			// fw.write(frequency.toString());
+			// fw.close();
 			publish(new Data(DataConstants.END, "File writing completed"));
 			return null;
 		}
