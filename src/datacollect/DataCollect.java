@@ -24,6 +24,11 @@ import java.util.List;
 import java.util.Map;
 
 import javax.imageio.ImageIO;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.Clip;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
 import javax.swing.BoxLayout;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
@@ -49,13 +54,18 @@ public class DataCollect extends JFrame {
 
 	private static final long serialVersionUID = -3478409869011707701L;
 	// Modify the following constants as needed
-	private static final String IMAGE_PATH = "images/";
-	private static final String FREQUENCY_PATH = "data/neurosky/frequency.dat";
-	private static final int DEFAULT_REPETITION = 20;
+	private static final String HOME_PATH = "data/neurosky/";
+	private static final String IMAGE_PATH = "resources/";
+	private static final String FREQUENCY_PATH = HOME_PATH + "frequency.dat";
+	private static final String EXP_FREQUENCY_PATH = HOME_PATH + "experimental/frequency.dat";
+	private static final String CATALOG_PATH = HOME_PATH + "catalog.dat";
+	private static final String EXP_CATALOG_PATH = HOME_PATH + "experimental/catalog.dat";
+	private static final int DEFAULT_REPETITION = 10;
 	private static final int INIT_WAIT_TIME = 2000;
 	private static final int INIT_CALIBRATION_TIME = 10000;
 	private static final int EXPRESSION_TIME = 5000;
 	private static final int CALM_TIME = 2000;
+	private static final boolean EXPERIMENTAL = true;
 
 	private List<JLabel> images = new ArrayList<JLabel>();;
 
@@ -70,6 +80,7 @@ public class DataCollect extends JFrame {
 	private int totalImageNumber;
 	private Socket socket;
 	private JSONObject frequency;
+	private JSONObject list;
 
 	/**
 	 * Launch the application.
@@ -103,14 +114,36 @@ public class DataCollect extends JFrame {
 		init();
 
 		try {
-			String s = readFrequencyData(new File(FREQUENCY_PATH));
+			String s;
+			if (EXPERIMENTAL) {
+				s = readFrequencyData(new File(EXP_FREQUENCY_PATH));
+			} else {
+				s = readFrequencyData(new File(FREQUENCY_PATH));
+			}
 			frequency = new JSONObject(s);
+			for (int i = 0; i < DataConstants.EFT_LENGTH; i++) {
+				if (!frequency.has(DataConstants.NAMES[i])) {
+					frequency.put(DataConstants.NAMES[i], 0);
+				}
+			}
 		} catch (IOException e) {
 			Map<String, Integer> newFrequency = new HashMap<String, Integer>();
 			for (int i = 0; i < DataConstants.EFT_LENGTH; i++) {
 				newFrequency.put(DataConstants.NAMES[i], 0);
 			}
 			frequency = new JSONObject(newFrequency);
+		}
+
+		try {
+			String s;
+			if (EXPERIMENTAL) {
+				s = readFrequencyData(new File(EXP_CATALOG_PATH));
+			} else {
+				s = readFrequencyData(new File(CATALOG_PATH));
+			}
+			list = new JSONObject(s);
+		} catch (IOException e) {
+			list = new JSONObject();
 		}
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -333,6 +366,7 @@ public class DataCollect extends JFrame {
 
 		private BufferedReader br;
 		private BufferedWriter bw;
+		private Runnable audio;
 
 		public NewRecordNeuro(int cycles) {
 			super(cycles);
@@ -349,6 +383,18 @@ public class DataCollect extends JFrame {
 				JOptionPane.showMessageDialog(contentPane, "Cannot connect to NeuroSky.", "Error",
 						JOptionPane.ERROR_MESSAGE);
 			}
+		}
+
+		private void getAudio() throws UnsupportedAudioFileException, LineUnavailableException, IOException {
+			AudioInputStream ais = AudioSystem.getAudioInputStream(new File(IMAGE_PATH + "beep.wav"));
+			Clip beep = AudioSystem.getClip();
+			beep.open(ais);
+			audio = new Runnable() {
+				@Override
+				public void run() {
+					beep.start();
+				}
+			};
 		}
 
 		@Override
@@ -379,10 +425,11 @@ public class DataCollect extends JFrame {
 				toWrite.add(current);
 			}
 			for (int times = 0; times < cycles; times++) {
+				getAudio();
+				audio.run();
 				int nextIndex = genNextImage();
 				publish(new Data(nextIndex, updateCounter()));
-				// frequency.put(DataConstants.NAMES[nextIndex],
-				// frequency.getInt(DataConstants.NAMES[nextIndex]) + 1);
+				frequency.increment(DataConstants.NAMES[nextIndex]);
 				String photoNumber = DataConstants.NAMES[nextIndex] + " (" + nextIndex + ")";
 				name = new ArrayList<String>();
 				name.add(photoNumber);
@@ -399,6 +446,8 @@ public class DataCollect extends JFrame {
 					}
 					toWrite.add(current);
 				}
+				getAudio();
+				audio.run();
 				publish(new Data(DataConstants.DASH, ""));
 				time = System.currentTimeMillis();
 				while (System.currentTimeMillis() - time < CALM_TIME) {
@@ -408,8 +457,14 @@ public class DataCollect extends JFrame {
 			publish(new Data(DataConstants.DASH, "Writing file"));
 			Date date = new Date();
 			SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+			list.put(dateFormat.format(date), cycles);
 			String sp = File.separator;
-			String location = "data" + sp + "neurosky" + sp + "experimental" + sp + dateFormat.format(date) + sp;
+			String location;
+			if (EXPERIMENTAL) {
+				location = "data" + sp + "neurosky" + sp + "experimental" + sp + dateFormat.format(date) + sp;
+			} else {
+				location = "data" + sp + "neurosky" + sp + dateFormat.format(date) + sp;
+			}
 			BufferedWriter fw = null;
 			for (int i = 0; i <= cycles; i++) {
 				for (int j = 0; j < 21; j++) {
@@ -439,10 +494,20 @@ public class DataCollect extends JFrame {
 					fw.close();
 				}
 			}
-			// fw = new BufferedWriter(new FileWriter(new
-			// File(FREQUENCY_PATH)));
-			// fw.write(frequency.toString());
-			// fw.close();
+			if (EXPERIMENTAL) {
+				fw = new BufferedWriter(new FileWriter(new File(EXP_FREQUENCY_PATH)));
+			} else {
+				fw = new BufferedWriter(new FileWriter(new File(FREQUENCY_PATH)));
+			}
+			fw.write(frequency.toString());
+			fw.close();
+			if (EXPERIMENTAL) {
+				fw = new BufferedWriter(new FileWriter(new File(EXP_CATALOG_PATH)));
+			} else {
+				fw = new BufferedWriter(new FileWriter(new File(CATALOG_PATH)));
+			}
+			fw.write(list.toString());
+			fw.close();
 			publish(new Data(DataConstants.END, "File writing completed"));
 			return null;
 		}
