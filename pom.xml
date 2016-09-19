@@ -18,7 +18,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
-		<resources>
+		<resources>	
 			<resource>
 				<directory>src</directory>
 				<excludes>
@@ -55,13 +55,6 @@
 			<version>20160212</version>
 		</dependency>
 		<dependency>
-			<groupId>sample</groupId>
-			<artifactId>com.sample</artifactId>
-			<version>1.0</version>
-			<scope>system</scope>
-			<systemPath>C:\Program Files (x86)\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM\doc\examples_Java\lib\jna.jar</systemPath>
-		</dependency>
-		<dependency>
 			<groupId>com.mkobos</groupId>
 			<artifactId>pca_transform</artifactId>
 			<version>1.0.2</version>
@@ -71,7 +64,7 @@
 			<artifactId>libsvm</artifactId>
 			<version>3.21</version>
 			<scope>system</scope>
-			<systemPath>C:\Program Files (x86)\Emotiv Education Edition SDK_v1.0.0.5-PREMIUM\doc\examples_Java\lib\libsvm.jar</systemPath>
+			<systemPath>/Users/tchan17/Documents/*BCI-Summer-Research/libsvm.jar</systemPath>
 		</dependency>
 	</dependencies>
 </project>

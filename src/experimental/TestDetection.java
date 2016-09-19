@@ -25,12 +25,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 import datacollect.NSSvmFormatter;
 import datacollect.NSTransform;
 
-public class TestDetection {
+public class TestDetection{
 
 	private static final boolean USE_COMMAND_LINE = true;
-	private static final boolean WINDOWS = true;
+	private static final boolean WINDOWS = false;
 
-	public static class BackgroundListener implements Closeable {
+	public static class BackgroundListener implements Closeable{
 
 		// If you want to set a max limit size queue size,
 		// all additional data will be discarded.
@@ -44,58 +44,62 @@ public class TestDetection {
 		private long processID = random.nextLong();
 		private AtomicInteger runCount = new AtomicInteger();
 
-		public BackgroundListener() {
+		public BackgroundListener(){
 
 		}
 
-		public BackgroundListener(ExecutorService executor) {
+		public BackgroundListener(ExecutorService executor){
 			service = executor;
 		}
 
-		public void startListening() {
+		public void startListening(){
 			Runnable inner = () -> {
-				try {
-					while (!closed) {
+				try{
+					while(!closed){
 						List<String> toBeProcessed = queue.take();
 						process(toBeProcessed);
 					}
-				} catch (InterruptedException e) {
+				}
+				catch(InterruptedException e){
 					System.out.println("Blocking interrupted, moving on!");
-				} catch (Exception e) {
+				}
+				catch(Exception e){
 					e.printStackTrace();
 				}
 			};
-			if (service == null) {
+			if(service == null){
 				thread = new Thread(inner);
 				thread.start();
-			} else {
+			}
+			else{
 				service.execute(inner);
 			}
 		}
 
-		public void process(List<String> current) throws IOException, InterruptedException {
+		public void process(List<String> current) throws IOException, InterruptedException{
 			List<Integer> data = NSTransform.parse(current);
 			if(data == null){
 				return;
 			}
 			double[] fft = NSTransform.fftSingle(data, data.size());
-			for (int i = 0; i < fft.length; i++) {
+			for(int i = 0; i < fft.length; i++){
 				fft[i] = Math.log10(fft[i]);
 			}
 			fft = NSTransform.linearBin(fft, 60);
 			String s = NSSvmFormatter.formatTestData(fft);
-			if (USE_COMMAND_LINE) {
+			if(USE_COMMAND_LINE){
 				processSVMCommandLine(s);
-			} else {
+			}
+			else{
 				processSVMJava(s);
 			}
 		}
 
-		public void processSVMJava(String svmData) {
+		public void processSVMJava(String svmData){
 
 		}
 
-		public void processSVMCommandLine(String svmData) throws IOException, InterruptedException {
+		public void processSVMCommandLine(String svmData) throws IOException, InterruptedException{
 			int currentRun = runCount.getAndIncrement();
 			System.out.println("Initiating run " + currentRun + "...");
 			File svm = new File("svm");
@@ -107,43 +111,45 @@ public class TestDetection {
 			String testNameScaled = testName + "_scaled";
 			String testNamePredicted = testName + "_predicted";
 			//System.out.println("Writing output...");
-			try {
+			try{
 				bw = new BufferedWriter(new FileWriter(new File("svm" + File.separator + testName)));
 				bw.write(svmData);
-			} finally {
-				if (bw != null) {
+			}
+			finally{
+				if(bw != null){
 					bw.close();
 				}
 			}
 			//System.out.println("Start scaling...");
 			String svmScale;
-			if (WINDOWS) {
+			if(WINDOWS){
 				svmScale = "C:\\Users\\CS\\Documents\\BCI-Summer-Research\\svm\\svm-scale.exe";
-			} else {
+			}
+			else{
 				svmScale = "./svm-scale";
 			}
-			Process process = Runtime.getRuntime().exec(
-					svmScale + " -r " + range + " " + testName, null, svm);
+			Process process = Runtime.getRuntime().exec(svmScale + " -r " + range + " " + testName, null, svm);
 			//System.out.println("Reading scaling...");
 			StringBuilder sb = new StringBuilder();
 			BufferedReader bry = new BufferedReader(new InputStreamReader(process.getInputStream()));
-			while (true) {
+			while(true){
 				int i = bry.read();
-				if (i >= 0) {
+				if(i >= 0){
 					sb.append((char) i);
 					// System.out.print((char) i);
-				} else {
+				}
+				else{
 					break;
 				}
 			}
 			process.waitFor();
 			//System.out.println("Done scaling, exit code: " + process.exitValue());
-			if (process.getErrorStream().available() > 0) {
+			if(process.getErrorStream().available() > 0){
 				System.out.println("Scaling errors: ");
 				BufferedReader brx = new BufferedReader(new InputStreamReader(process.getErrorStream()));
-				while (brx.ready()) {
+				while(brx.ready()){
 					int i = brx.read();
-					if (i >= 0) {
+					if(i >= 0){
 						System.out.print((char) i);
 					}
 				}
@@ -153,17 +159,19 @@ public class TestDetection {
 			//System.out.println("Writing scaling...");
 			String scaled = sb.toString();
 			BufferedWriter bw2 = new BufferedWriter(new FileWriter(new File("svm" + File.separator + testNameScaled)));
-			try {
+			try{
 				bw2.write(scaled);
-			} finally {
-				if (bw2 != null) {
+			}
+			finally{
+				if(bw2 != null){
 					bw2.close();
 				}
 			}
 			String svmPredict;
-			if (WINDOWS) {
+			if(WINDOWS){
 				svmPredict = "C:\\Users\\CS\\Documents\\BCI-Summer-Research\\svm\\svm-predict.exe";
-			} else {
+			}
+			else{
 				svmPredict = "./svm-predict";
 			}
 			//System.out.println("Start predicting...");
@@ -171,12 +179,12 @@ public class TestDetection {
 					.exec(svmPredict + " " + testName + " " + modelName + " " + testNamePredicted, null, svm);
 			process2.waitFor();
 			//System.out.println("Done predicting, exit code: " + process2.exitValue());
-			if (process2.getErrorStream().available() > 0) {
+			if(process2.getErrorStream().available() > 0){
 				System.out.println("Predicting errors: ");
 				BufferedReader brx = new BufferedReader(new InputStreamReader(process2.getErrorStream()));
-				while (brx.ready()) {
+				while(brx.ready()){
 					int i = brx.read();
-					if (i >= 0) {
+					if(i >= 0){
 						System.out.print((char) i);
 					}
 				}
@@ -187,14 +195,15 @@ public class TestDetection {
 			BufferedReader br = new BufferedReader(
 					new FileReader(new File("svm" + File.separator + testNamePredicted)));
 			List<String> predictedInput = new ArrayList<String>();
-			try {
+			try{
 				String s = br.readLine();
-				while (s != null) {
+				while(s != null){
 					predictedInput.add(s);
 					s = br.readLine();
 				}
-			} finally {
-				if (br != null) {
+			}
+			finally{
+				if(br != null){
 					br.close();
 				}
 			}
@@ -202,7 +211,7 @@ public class TestDetection {
 			System.out.println(predictedInput);
 			for(String s : predictedInput){
 				if(s.equals("2")){
-					System.out.println("Detected: close eye");	
+					System.out.println("Detected: close eye");
 				}
 				else if(s.equals("4")){
 					System.out.println("Detected: left wink");
@@ -214,18 +223,19 @@ public class TestDetection {
 			//System.out.println("Done!");
 		}
 
-		public BlockingQueue<List<String>> getBlockingQueue() {
+		public BlockingQueue<List<String>> getBlockingQueue(){
 			return queue;
 		}
 
 		@Override
-		public void close() {
+		public void close(){
 			closed = true;
-			if (service == null) {
-				if (thread != null) {
+			if(service == null){
+				if(thread != null){
 					thread.interrupt();
 				}
-			} else {
+			}
+			else{
 				service.shutdownNow();
 			}
 		}
@@ -233,24 +243,25 @@ public class TestDetection {
 	}
 
 	// testing code
-	public static void test(String[] args) {
+	public static void test(String[] args){
 		BackgroundListener listener = new BackgroundListener();
-		try {
+		try{
 			listener.processSVMCommandLine(Files.lines(Paths.get("/Users/mfeng17/Desktop/a1a")).reduce("",
 					(s1, s2) -> s1.length() == 0 ? s2 : s1 + "\n" + s2));
-		} catch (IOException | InterruptedException e) {
+		}
+		catch(IOException | InterruptedException e){
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		listener.close();
 	}
 
-	public static void main(String[] args) {
+	public static void main(String[] args){
 		BackgroundListener listener = new BackgroundListener();
 		Socket socket = null;
 		BufferedReader br = null;
 		BufferedWriter bw = null;
-		try {
+		try{
 			socket = new Socket("127.0.0.1", 13854);
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
@@ -259,17 +270,17 @@ public class TestDetection {
 			bw.write("{\"enableRawOutput\":true,\"format\":\"Json\"}");
 			bw.flush();
 			String line = br.readLine();
-			while (!line.startsWith("{\"raw")) {
+			while(!line.startsWith("{\"raw")){
 				line = br.readLine();
 			}
 			System.out.println("START");
 			listener.startListening();
-			while (true) {
+			while(true){
 				int counter = 0;
 				final List<String> current = new ArrayList<String>();
-				while (counter < 256) {
+				while(counter < 256){
 					line = br.readLine();
-					if (line.startsWith("{\"raw")) {
+					if(line.startsWith("{\"raw")){
 						counter++;
 					}
 					current.add(line);
@@ -277,9 +288,11 @@ public class TestDetection {
 				// Adds a new item to be processed
 				listener.getBlockingQueue().offer(current);
 			}
-		} catch (IOException e) {
+		}
+		catch(IOException e){
 			e.printStackTrace();
-		} finally {
+		}
+		finally{
 			listener.close();
 		}
 	}
