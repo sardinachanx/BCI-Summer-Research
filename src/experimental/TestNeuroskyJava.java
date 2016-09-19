@@ -1,26 +1,13 @@
 package experimental;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.net.Socket;
-import java.net.UnknownHostException;
+public class TestNeuroskyJava{
 
-public class TestNeuroskyJava {
-
-	public static void main(String[] args) {
+	public static void main(String[] args){
 
 		PrintWriter writeFile = null;
 		Socket socket = null;
 
-		try {
+		try{
 			socket = new Socket("127.0.0.1", 13854);
 			InputStream is = socket.getInputStream();
 			OutputStream os = socket.getOutputStream();
@@ -43,47 +30,48 @@ public class TestNeuroskyJava {
 			/*bw.write("{\"startRecording\":{\"rawEeg\":true,\"poorSignalLevel\":true,\"eSense\":true,"
 					+ "eegPower\":true,\"blinkStrength\":true},\"applicationName\":\"ExampleApp\"}");
 			bw.flush();*/
-			
+
 			String line = br.readLine();
 			while(line.startsWith("{\"poorSignalLevel\":200,")){
 				line = br.readLine();
 			}
-			
+
 			System.out.println("Start Recording:");
-			
+
 			Thread.sleep(10000);
 			bw.write("{\"stopRecording\":\"ExampleApp\"}");
 			bw.flush();
 			System.out.println("End Recording");
-			
+
 			bw.write("{\"getSessionIds\":\"ExampleApp\"}");
-			
+
 			while(true){
 				System.out.print(br.read());
 			}
-			
-			
 
-
-		} catch (UnknownHostException e) {
+		}
+		catch(UnknownHostException e){
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (IOException e) {
+		}
+		catch(IOException e){
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} catch (InterruptedException e) {
+		}
+		catch(InterruptedException e){
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		} 
+		}
 
-		finally {
-			if (writeFile != null) {
+		finally{
+			if(writeFile != null){
 				writeFile.close();
 			}
 			if(socket != null){
 				try{
 					socket.close();
-				} catch (IOException e) {
+				}
+				catch(IOException e){
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
