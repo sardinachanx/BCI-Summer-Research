@@ -16,18 +16,18 @@ if not is_win32:
 	svmtrain_exe = "../svm-train"
 	svmpredict_exe = "../svm-predict"
 	grid_py = "./grid.py"
-	gnuplot_exe = "/usr/bin/gnuplot"
+	gnuplot_exe = "/Users/mfeng17/Desktop/gnuplot"
 else:
         # example for windows
 	#svmscale_exe = r"..\windows\svm-scale.exe"
-	svmscale_exe = r"C:\Users\CS\Documents\BCI-Summer-Research\svm\bin\svm-scale.exe"
+	svmscale_exe = r".\svm-scale.exe"
 	#svmtrain_exe = r"..\windows\svm-train.exe"
-	svmtrain_exe = r"C:\Users\CS\Documents\BCI-Summer-Research\svm\bin\svm-train.exe"
+	svmtrain_exe = r".\svm-train.exe"
 	#svmpredict_exe = r"..\windows\svm-predict.exe"
-	svmpredict_exe = r"C:\Users\CS\Documents\BCI-Summer-Research\svm\bin\svm-predict.exe"
+	svmpredict_exe = r".\svm-predict.exe"
 	#gnuplot_exe = r"c:\tmp\gnuplot\binary\pgnuplot.exe"
-	gnuplot_exe = r"C:\Program Files\gnuplot\bin\gnuplot.exe"
-	grid_py = r"C:\Users\CS\Documents\BCI-Summer-Research\svm\grid.py"
+	gnuplot_exe = r"C:\Program Files (x86)\gnuplot\bin\gnuplot.exe"
+	grid_py = r".\grid.py"
 
 assert os.path.exists(svmscale_exe),"svm-scale executable not found"
 assert os.path.exists(svmtrain_exe),"svm-train executable not found"
@@ -66,7 +66,8 @@ c,g,rate = map(float,last_line.split())
 
 print('Best c={0}, g={1} CV rate={2}'.format(c,g,rate))
 
-cmd = '{0} -c {1} -g {2} "{3}" "{4}"'.format(svmtrain_exe,c,g,scaled_file,model_file)
+# -w2 0.10 -w3 1 -w4 0.2137 -w5 0.07
+cmd = '{0} -c {1} -g {2} -w2 1 -w3 0.55 -w5 0.25 "{3}" "{4}"'.format(svmtrain_exe,c,g,scaled_file,model_file)
 print('Training...')
 Popen(cmd, shell = True, stdout = PIPE).communicate()
 

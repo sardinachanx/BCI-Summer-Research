@@ -11,7 +11,9 @@ import java.util.List;
 import org.json.JSONObject;
 import org.jtransforms.fft.DoubleFFT_1D;
 
-public class NSTransform {
+public class NSTransform{
+	
+	public static final int DEFAULT_K = 2;
 
 	private static final int DEFAULT_RESOLUTION = 256;
 
@@ -21,14 +23,15 @@ public class NSTransform {
 	private List<double[]> averaged = null;
 	private List<double[]> binned = null;
 	private int label;
+	private int size;
 
 	/*
 	 * public NSTransform(String filePath) { this(new File(filePath)); }
-	 * 
+	 *
 	 * public NSTransform(File file) { this.file = file; }
-	 * 
+	 *
 	 * public void transformFile() { parseFile(); transform(); }
-	 * 
+	 *
 	 * private void parseFile() { BufferedReader br = null; try { br = new
 	 * BufferedReader(new FileReader(file)); String line = br.readLine();
 	 * List<Integer> current = new ArrayList<Integer>(); line = br.readLine();
@@ -41,92 +44,116 @@ public class NSTransform {
 	 * e.printStackTrace(); } finally { if (br != null) { try { br.close(); }
 	 * catch (IOException e) { e.printStackTrace(); } } } }
 	 */
-	public NSTransform(String folderLocation) {
+	public NSTransform(String folderLocation){
 		this(folderLocation, DEFAULT_RESOLUTION);
 	}
 
-	public NSTransform(String folderLocation, int resolution) {
+	public NSTransform(String folderLocation, int resolution){
+		this(folderLocation, resolution, null);
+	}
+
+	public NSTransform(String folderLocation, int resolution, int[] vals){
 		this.resolution = resolution;
 		BufferedReader br = null;
-		for (int i = 1; i <= 20; i++) {
+		if(vals == null){
+			vals = new int[20];
+			for(int i = 0; i < 20; i++){
+				vals[i] = i + 1;
+			}
+		}
+		size = vals.length;
+		for(int i : vals){
 			File file = new File(folderLocation + File.separator + i + ".json");
 			List<Integer> current = new ArrayList<Integer>();
-			try {
+			try{
 				br = new BufferedReader(new FileReader(file));
 				String line = br.readLine();
-				while (line != null) {
+				while(line != null){
 					JSONObject o = new JSONObject(line);
-					if (o.has("rawEeg")) {
+					if(o.has("rawEeg")){
 						current.add(o.getInt("rawEeg"));
 					}
 					line = br.readLine();
 				}
 				toTransform.add(current);
-			} catch (IOException e) {
+			}
+			catch(IOException e){
 				e.printStackTrace();
-			} finally {
-				if (br != null) {
-					try {
+			}
+			finally{
+				if(br != null){
+					try{
 						br.close();
-					} catch (IOException e) {
+					}
+					catch(IOException e){
 						e.printStackTrace();
 					}
 				}
 			}
 		}
 		File file = new File(folderLocation + File.separator + "name.txt");
-		try {
+		try{
 			br = new BufferedReader(new FileReader(file));
 			String line = br.readLine();
 			String[] split = line.split(" ");
 			String s = split[1].substring(1, 2);
-			this.label = Integer.parseInt(s);
+			label = Integer.parseInt(s);
 
-		} catch (IOException e) {
+		}
+		catch(IOException e){
 			e.printStackTrace();
-		} finally {
-			if (br != null) {
-				try {
+		}
+		finally{
+			if(br != null){
+				try{
 					br.close();
-				} catch (IOException e) {
+				}
+				catch(IOException e){
 					e.printStackTrace();
 				}
 			}
 		}
 	}
-	
+
+	public NSTransform(List<List<String>> fromRaw){
+		for(List<String> single : fromRaw){
+			toTransform.add(parse(single));
+		}
+		resolution = toTransform.get(0).size();
+	}
+
 	public static List<Integer> parse(List<String> raw){
 		List<Integer> data = new ArrayList<Integer>();
 		for(String line : raw){
 			JSONObject o = new JSONObject(line);
-			if (o.has("rawEeg")) {
+			if(o.has("rawEeg")){
 				data.add(o.getInt("rawEeg"));
 			}
 		}
 		return data;
 	}
 
-	public int getLabel() {
+	public int getLabel(){
 		return label;
 	}
 
-	public List<List<Integer>> getToTransform() {
+	public List<List<Integer>> getToTransform(){
 		return toTransform;
 	}
 
-	public List<double[]> getTransformed() {
+	public List<double[]> getTransformed(){
 		return transformed;
 	}
 
-	public void transform() {
+	public void transform(){
 		transformed = new ArrayList<double[]>();
-		for (List<Integer> list : toTransform) {
+		for(List<Integer> list : toTransform){
 			transformed.add(fftSingle(list, resolution));
 		}
 	}
 
 	@Deprecated
-	public static double[] fftSingleOld(List<Integer> list) {
+	public static double[] fftSingleOld(List<Integer> list){
 		double[] toTransform = toDoubleArray(list);
 		DoubleFFT_1D fft = new DoubleFFT_1D(toTransform.length);
 		double[] transformed = new double[toTransform.length * 2];
@@ -135,18 +162,18 @@ public class NSTransform {
 		return transformed;
 	}
 
-	public static double[] fftSingle(List<Integer> list, int resolution) {
+	public static double[] fftSingle(List<Integer> list, int resolution){
 		double[] toTransform = toDoubleArray(list);
 		return fftSingle(toTransform, resolution);
 	}
 
-	public static double[] fftSingle(double[] toTransform, int resolution) {
+	public static double[] fftSingle(double[] toTransform, int resolution){
 		DoubleFFT_1D fft = new DoubleFFT_1D(resolution);
 		double[] transformed = new double[toTransform.length];
 		System.arraycopy(toTransform, 0, transformed, 0, toTransform.length);
 		fft.realForward(transformed);
 		double[] realTransformed = new double[resolution / 2];
-		for (int i = 0; i < resolution / 2; i++) {
+		for(int i = 0; i < resolution / 2; i++){
 			realTransformed[i] = transformed[2 * i];
 		}
 		for(int i = 0; i < realTransformed.length; i++){
@@ -156,30 +183,30 @@ public class NSTransform {
 
 	}
 
-	public static double[] toDoubleArray(List<Integer> list) {
+	public static double[] toDoubleArray(List<Integer> list){
 		double[] array = new double[list.size()];
-		for (int i = 0; i < list.size(); i++) {
+		for(int i = 0; i < list.size(); i++){
 			array[i] = list.get(i);
 		}
 		return array;
 	}
 
-	public void average(int k) {
+	public void average(int k){
 		averaged = kAverage(transformed, k);
 	}
 
-	public static List<double[]> kAverage(List<double[]> list, int k) {
+	public static List<double[]> kAverage(List<double[]> list, int k){
 		List<double[]> toReturn = new ArrayList<double[]>();
-		for (int i = 0; i < list.size(); i += k) {
+		for(int i = 0; i < list.size(); i += k){
 			double[] summed = new double[list.get(i).length];
-			for (int j = i; j < i + k; j++) {
+			for(int j = i; j < i + k; j++){
 				double[] current = list.get(j);
 				//System.out.println(j + ": " + Arrays.toString(current));
-				for (int a = 0; a < summed.length; a++) {
+				for(int a = 0; a < summed.length; a++){
 					summed[a] += current[a];
 				}
 			}
-			for (int j = 0; j < summed.length; j++) {
+			for(int j = 0; j < summed.length; j++){
 				summed[j] /= k;
 				summed[j] = Math.log10(summed[j]);
 			}
@@ -189,57 +216,57 @@ public class NSTransform {
 		return toReturn;
 	}
 
-	public List<double[]> getAveraged() {
+	public List<double[]> getAveraged(){
 		return averaged;
 	}
 
-	public void linearBin() {
+	public void linearBin(){
 		binned = new ArrayList<double[]>();
-		for (double[] average : averaged) {
+		for(double[] average : averaged){
 			binned.add(linearBin(average, 60));
 		}
 	}
 
-	public void modifiedLogBin() {
+	public void modifiedLogBin(){
 		binned = new ArrayList<double[]>();
-		for (double[] average : averaged) {
+		for(double[] average : averaged){
 			binned.add(modifiedLogBin(average, 60));
 		}
 	}
 
-	public List<double[]> getBinned() {
+	public List<double[]> getBinned(){
 		return binned;
 	}
 
-	public void setResolution(int resolution) {
+	public void setResolution(int resolution){
 		this.resolution = resolution;
 	}
 
-	public void skipAverage() {
+	public void skipAverage(){
 		averaged = transformed;
 	}
 
 	@Deprecated
-	public static double[][] linearBinOld(double[] data, int b) {
+	public static double[][] linearBinOld(double[] data, int b){
 		double[][] dataWL = new double[2][b];
 		int dataLength = data.length;
 		float binSize = (float) dataLength / b;
-		for (int i = 0; i < b; i++) {
+		for(int i = 0; i < b; i++){
 			float min = binSize * i;
 			float max = binSize * (i + 1);
 			int start = (int) min;
-			if (start != min) {
+			if(start != min){
 				start += 1;
 			}
 			int end = (int) max;
-			if (end != max) {
+			if(end != max){
 				end += 1;
 			}
 			double sum = 0;
-			for (int a = start; a < end; a++) {
+			for(int a = start; a < end; a++){
 				sum += data[a];
 			}
-			sum /= (end - start);
+			sum /= end - start;
 			double midPoint = (max + min) / 2;
 			dataWL[0][i] = sum;
 			dataWL[1][i] = midPoint;
@@ -248,35 +275,35 @@ public class NSTransform {
 		return dataWL;
 	}
 
-	public static double[] linearBin(double[] data, int b) {
+	public static double[] linearBin(double[] data, int b){
 		double[] binnedData = new double[b];
 		int dataLength = data.length;
 		float binSize = (float) dataLength / b;
-		for (int i = 0; i < b; i++) {
+		for(int i = 0; i < b; i++){
 			float min = binSize * i;
 			float max = binSize * (i + 1);
 			int start = (int) min;
-			if (start != min) {
+			if(start != min){
 				start += 1;
 			}
 			int end = (int) max;
-			if (end != max) {
+			if(end != max){
 				end += 1;
 			}
 			double sum = 0;
-			for (int a = start; a < end; a++) {
+			for(int a = start; a < end; a++){
 				sum += data[a];
 			}
-			sum /= (end - start);
+			sum /= end - start;
 			binnedData[i] = sum;
 		}
 		return binnedData;
 	}
 
 	@Deprecated
-	public static double[][] modifiedLogBinOld(double[] data, int b) {
+	public static double[][] modifiedLogBinOld(double[] data, int b){
 		double[][] dataWL = new double[2][b];
-		for (int i = 0; i < 40; i++) {
+		for(int i = 0; i < 40; i++){
 			dataWL[0][i] = data[i];
 			dataWL[1][i] = i;
 		}
@@ -284,24 +311,24 @@ public class NSTransform {
 		double max = Math.log10(data.length);
 		double min = Math.log10(40);
 		double expLogBinSize = (max - min) / b;
-		for (int i = 0; i < b; i++) {
+		for(int i = 0; i < b; i++){
 			double cExpMin = min + expLogBinSize * i;
 			double cExpMax = min + expLogBinSize * (i + 1);
 			double cMin = Math.pow(10, cExpMin);
 			double cMax = Math.pow(10, cExpMax);
 			int start = (int) cMin;
-			if (cMin != start) {
+			if(cMin != start){
 				start += 1;
 			}
 			int end = (int) cMax;
-			if (cMax != end) {
+			if(cMax != end){
 				end += 1;
 			}
 			double sum = 0;
-			for (int a = start; a < end; a++) {
+			for(int a = start; a < end; a++){
 				sum += data[a];
 			}
-			sum /= (end - start);
+			sum /= end - start;
 			double midPoint = (cMin - cMax) / 2;
 			dataWL[0][i] = sum;
 			dataWL[1][i] = midPoint;
@@ -309,43 +336,47 @@ public class NSTransform {
 		return dataWL;
 	}
 
-	public static double[] modifiedLogBin(double[] data, int b) {
+	public static double[] modifiedLogBin(double[] data, int b){
 		double[] dataWL = new double[b];
-		for (int i = 0; i < 40; i++) {
+		for(int i = 0; i < 40; i++){
 			dataWL[i] = data[i];
 		}
 		b -= 40;
 		double max = Math.log10(data.length);
 		double min = Math.log10(40);
 		double expLogBinSize = (max - min) / b;
-		for (int i = 0; i < b; i++) {
+		for(int i = 0; i < b; i++){
 			double cExpMin = min + expLogBinSize * i;
 			double cExpMax = min + expLogBinSize * (i + 1);
 			double cMin = Math.pow(10, cExpMin);
 			double cMax = Math.pow(10, cExpMax);
 			int start = (int) cMin;
-			if (cMin != start) {
+			if(cMin != start){
 				start += 1;
 			}
 			int end = (int) cMax;
-			if (cMax != end) {
+			if(cMax != end){
 				end += 1;
 			}
 			double sum = 0;
-			for (int a = start; a < end; a++) {
+			for(int a = start; a < end; a++){
 				sum += data[a];
 			}
-			sum /= (end - start);
+			sum /= end - start;
 			dataWL[40 + i] = sum;
 		}
 		return dataWL;
 	}
 
-	public static void main(String[] args) {
-		double[] sV = { 0, 1, 2, 3, 4, 5, 6, 7 };
+	public static void main(String[] args){
+		double[] sV = {0, 1, 2, 3, 4, 5, 6, 7};
 		System.out.println(Arrays.toString(sV));
 		System.out.println(Arrays.toString(fftSingle(sV, 8)));
 
+	}
+
+	public int getSize(){
+		return size;
 	}
 
 	/*

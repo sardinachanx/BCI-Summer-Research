@@ -35,7 +35,8 @@ public class TestDetection{
 		// If you want to set a max limit size queue size,
 		// all additional data will be discarded.
 		// This is useful if processing is slower than input data.
-		public BlockingQueue<List<String>> queue = new LinkedBlockingQueue<List<String>>();
+		public BlockingQueue<List<String>> queue =
+				new LinkedBlockingQueue<List<String>>();
 
 		private boolean closed = false;
 		private Thread thread;
@@ -76,7 +77,8 @@ public class TestDetection{
 			}
 		}
 
-		public void process(List<String> current) throws IOException, InterruptedException{
+		public void process(List<String> current)
+				throws IOException, InterruptedException{
 			List<Integer> data = NSTransform.parse(current);
 			if(data == null){
 				return;
@@ -99,7 +101,8 @@ public class TestDetection{
 
 		}
 
-		public void processSVMCommandLine(String svmData) throws IOException, InterruptedException{
+		public void processSVMCommandLine(String svmData)
+				throws IOException, InterruptedException{
 			int currentRun = runCount.getAndIncrement();
 			System.out.println("Initiating run " + currentRun + "...");
 			File svm = new File("svm");
@@ -112,7 +115,8 @@ public class TestDetection{
 			String testNamePredicted = testName + "_predicted";
 			//System.out.println("Writing output...");
 			try{
-				bw = new BufferedWriter(new FileWriter(new File("svm" + File.separator + testName)));
+				bw = new BufferedWriter(new FileWriter(
+						new File("svm" + File.separator + testName)));
 				bw.write(svmData);
 			}
 			finally{
@@ -123,15 +127,18 @@ public class TestDetection{
 			//System.out.println("Start scaling...");
 			String svmScale;
 			if(WINDOWS){
-				svmScale = "C:\\Users\\CS\\Documents\\BCI-Summer-Research\\svm\\svm-scale.exe";
+				svmScale =
+						"C:\\Users\\CS\\Documents\\BCI-Summer-Research\\svm\\svm-scale.exe";
 			}
 			else{
 				svmScale = "./svm-scale";
 			}
-			Process process = Runtime.getRuntime().exec(svmScale + " -r " + range + " " + testName, null, svm);
+			Process process = Runtime.getRuntime().exec(
+					svmScale + " -r " + range + " " + testName, null, svm);
 			//System.out.println("Reading scaling...");
 			StringBuilder sb = new StringBuilder();
-			BufferedReader bry = new BufferedReader(new InputStreamReader(process.getInputStream()));
+			BufferedReader bry = new BufferedReader(
+					new InputStreamReader(process.getInputStream()));
 			while(true){
 				int i = bry.read();
 				if(i >= 0){
@@ -146,7 +153,8 @@ public class TestDetection{
 			//System.out.println("Done scaling, exit code: " + process.exitValue());
 			if(process.getErrorStream().available() > 0){
 				System.out.println("Scaling errors: ");
-				BufferedReader brx = new BufferedReader(new InputStreamReader(process.getErrorStream()));
+				BufferedReader brx = new BufferedReader(
+						new InputStreamReader(process.getErrorStream()));
 				while(brx.ready()){
 					int i = brx.read();
 					if(i >= 0){
@@ -158,7 +166,8 @@ public class TestDetection{
 
 			//System.out.println("Writing scaling...");
 			String scaled = sb.toString();
-			BufferedWriter bw2 = new BufferedWriter(new FileWriter(new File("svm" + File.separator + testNameScaled)));
+			BufferedWriter bw2 = new BufferedWriter(new FileWriter(
+					new File("svm" + File.separator + testNameScaled)));
 			try{
 				bw2.write(scaled);
 			}
@@ -169,19 +178,22 @@ public class TestDetection{
 			}
 			String svmPredict;
 			if(WINDOWS){
-				svmPredict = "C:\\Users\\CS\\Documents\\BCI-Summer-Research\\svm\\svm-predict.exe";
+				svmPredict =
+						"C:\\Users\\CS\\Documents\\BCI-Summer-Research\\svm\\svm-predict.exe";
 			}
 			else{
 				svmPredict = "./svm-predict";
 			}
 			//System.out.println("Start predicting...");
-			Process process2 = Runtime.getRuntime()
-					.exec(svmPredict + " " + testName + " " + modelName + " " + testNamePredicted, null, svm);
+			Process process2 =
+					Runtime.getRuntime().exec(svmPredict + " " + testName + " "
+							+ modelName + " " + testNamePredicted, null, svm);
 			process2.waitFor();
 			//System.out.println("Done predicting, exit code: " + process2.exitValue());
 			if(process2.getErrorStream().available() > 0){
 				System.out.println("Predicting errors: ");
-				BufferedReader brx = new BufferedReader(new InputStreamReader(process2.getErrorStream()));
+				BufferedReader brx = new BufferedReader(
+						new InputStreamReader(process2.getErrorStream()));
 				while(brx.ready()){
 					int i = brx.read();
 					if(i >= 0){
@@ -192,8 +204,8 @@ public class TestDetection{
 			}
 
 			//System.out.println("Reading prediction results...");
-			BufferedReader br = new BufferedReader(
-					new FileReader(new File("svm" + File.separator + testNamePredicted)));
+			BufferedReader br = new BufferedReader(new FileReader(
+					new File("svm" + File.separator + testNamePredicted)));
 			List<String> predictedInput = new ArrayList<String>();
 			try{
 				String s = br.readLine();
@@ -246,8 +258,10 @@ public class TestDetection{
 	public static void test(String[] args){
 		BackgroundListener listener = new BackgroundListener();
 		try{
-			listener.processSVMCommandLine(Files.lines(Paths.get("/Users/mfeng17/Desktop/a1a")).reduce("",
-					(s1, s2) -> s1.length() == 0 ? s2 : s1 + "\n" + s2));
+			listener.processSVMCommandLine(
+					Files.lines(Paths.get("/Users/mfeng17/Desktop/a1a"))
+							.reduce("", (s1, s2) -> s1.length() == 0 ? s2
+									: s1 + "\n" + s2));
 		}
 		catch(IOException | InterruptedException e){
 			// TODO Auto-generated catch block

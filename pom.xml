@@ -63,8 +63,6 @@
 			<groupId>sample</groupId>
 			<artifactId>libsvm</artifactId>
 			<version>3.21</version>
-			<scope>system</scope>
-			<systemPath>/Users/tchan17/Documents/*BCI-Summer-Research/libsvm.jar</systemPath>
 		</dependency>
 	</dependencies>
 </project>
